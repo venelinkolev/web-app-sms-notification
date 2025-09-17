@@ -1,0 +1,110 @@
+<div class="container">
+    <header class="text-center p-lg">
+        <h1 class="text-primary">{{ title }}</h1>
+        <p class="text-secondary">Phase Setup - Под-задача 2: Environment Configuration Testing</p>
+        <div class="mode-indicator">
+            <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
+                {{ getModeIcon() }} {{ getModeName() }} Mode
+            </span>
+        </div>
+    </header>
+
+    <main class="d-flex justify-center">
+        <div class="config-grid">
+
+            <!-- App Configuration -->
+            <div class="card config-card">
+                <h2 class="text-primary">📱 App Configuration</h2>
+                <div class="config-item">
+                    <strong>Name:</strong> {{ environmentData.app?.name }}
+                </div>
+                <div class="config-item">
+                    <strong>Version:</strong> {{ environmentData.app?.version }}
+                </div>
+                <div class="config-item">
+                    <strong>Debug Mode:</strong>
+                    <span [class]="isDebugMode ? 'text-warning' : 'text-success'">
+                        {{ isDebugMode ? '🐛 Enabled' : '✅ Disabled' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- SMS API Configuration -->
+            <div class="card config-card">
+                <h2 class="text-info">📨 SMS API Configuration</h2>
+                <div class="config-item">
+                    <strong>Base URL:</strong> {{ environmentData.smsApi?.baseUrl }}
+                </div>
+                <div class="config-item">
+                    <strong>API Token:</strong>
+                    <span [class]="environmentData.smsApi?.hasToken ? 'text-success' : 'text-error'">
+                        {{ environmentData.smsApi?.hasToken ? '✅ Configured' : '❌ Missing' }}
+                    </span>
+                </div>
+                <div class="config-item">
+                    <strong>Test Mode:</strong>
+                    <span [class]="environmentData.smsApi?.testMode ? 'text-warning' : 'text-success'">
+                        {{ environmentData.smsApi?.testMode ? '🧪 Enabled' : '🚀 Live' }}
+                    </span>
+                </div>
+                <div class="config-item">
+                    <strong>Character Limits:</strong>
+                    <div class="sub-config">
+                        Standard: {{ environmentData.smsApi?.characterLimits?.standard }} chars<br>
+                        Unicode: {{ environmentData.smsApi?.characterLimits?.unicode }} chars
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Configuration -->
+            <div class="card config-card">
+                <h2 class="text-success">🎯 Feature Flags</h2>
+                <div class="feature-list">
+                    <div class="feature-item" *ngFor="let feature of featuresArray">
+                        <span class="feature-name">{{ feature.key }}:</span>
+                        <span class="feature-status">{{ getFeatureIcon(feature.value) }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- UI Configuration -->
+            <div class="card config-card">
+                <h2 class="text-warning">🎨 UI Configuration</h2>
+                <div class="config-item">
+                    <strong>Max File Size:</strong> {{ environmentData.ui?.maxFileSize }}
+                </div>
+                <div class="config-item">
+                    <strong>Table Page Size:</strong> {{ environmentData.ui?.tablePageSize }} items
+                </div>
+                <div class="config-item">
+                    <strong>Animation Duration:</strong> {{ environmentData.ui?.animationDuration }}ms
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Testing Instructions -->
+    <section class="testing-instructions card">
+        <h3 class="text-primary">🧪 Environment Testing Instructions</h3>
+        <div class="test-steps">
+            <div class="test-step">
+                <strong>1. Development Mode:</strong> Verify you see "🛠️ Development Mode" badge above
+            </div>
+            <div class="test-step">
+                <strong>2. SMS API Token:</strong> Should show "❌ Missing" (normal for initial setup)
+            </div>
+            <div class="test-step">
+                <strong>3. Test Mode:</strong> Should show "🧪 Enabled" in development
+            </div>
+            <div class="test-step">
+                <strong>4. All Features:</strong> Should show "✅" for all feature flags
+            </div>
+            <div class="test-step">
+                <strong>5. Production Build:</strong> Run <code>npm run build</code> to test production config
+            </div>
+        </div>
+    </section>
+</div>
+
+<router-outlet></router-outlet>

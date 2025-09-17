@@ -1,4 +1,3 @@
-/* To learn more about this file see: https://angular.io/config/tsconfig. */
 {
   "compileOnSave": false,
   "compilerOptions": {
@@ -11,6 +10,7 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "sourceMap": true,
     "declaration": false,
     "experimentalDecorators": true,
@@ -19,9 +19,15 @@
     "target": "ES2022",
     "module": "ES2022",
     "useDefineForClassFields": false,
+    "resolveJsonModule": true,
+    "allowJs": true,
     "lib": [
       "ES2022",
       "dom"
+    ],
+    "types": [
+      "jasmine",
+      "node"
     ]
   },
   "angularCompilerOptions": {
