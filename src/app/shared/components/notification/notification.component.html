@@ -1,0 +1,31 @@
+<div class="notification-container">
+    @for (notification of notifications$ | async; track notification.id) {
+    <div class="notification" [class]="getNotificationClass(notification.type)" [class.visible]="notification.visible">
+        <div class="notification-content">
+            <div class="notification-icon">
+                {{ getNotificationIcon(notification.type) }}
+            </div>
+            <div class="notification-text">
+                <div class="notification-title">{{ notification.title }}</div>
+                <div class="notification-message">{{ notification.message }}</div>
+            </div>
+            @if (notification.dismissible) {
+            <button class="notification-close" (click)="dismiss(notification.id)" type="button">
+                ✕
+            </button>
+            }
+        </div>
+
+        @if (notification.actions && notification.actions.length > 0) {
+        <div class="notification-actions">
+            @for (action of notification.actions; track action.label) {
+            <button class="notification-action" [class]="'btn-' + (action.style || 'secondary')"
+                (click)="handleAction(action, notification.id)" type="button">
+                {{ action.label }}
+            </button>
+            }
+        </div>
+        }
+    </div>
+    }
+</div>

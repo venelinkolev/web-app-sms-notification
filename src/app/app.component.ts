@@ -1,175 +1,201 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { EnvironmentService } from './core/services/environment.service';
-import type { Environment } from '../environments/environment.interface';
 
-// Import new TypeScript models for testing
-import {
-  ClientRecord,
-  ParsedClientRecord,
-  ValidationErrorCode,
-  SMSStatus,
-  SMSEncoding,
-  NotificationType,
-  AppView
-} from './core/models';
+// Services
+import { EnvironmentService } from './core/services/environment.service';
+import { NotificationService } from './core/services/notification.service';
+
+// Components
+import { FileUploadComponent } from './features/file-upload/file-upload.component';
+import { NotificationComponent } from './shared/components/notification/notification.component';
+
+// Models
+import { ClientDataImport, NotificationType } from './core/models';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [
+    RouterOutlet,
+    CommonModule,
+    FileUploadComponent,
+    NotificationComponent
+  ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
 export class AppComponent implements OnInit {
   title = 'SMS Notification Application';
 
-  // Environment data for testing
-  environmentData: any = {};
+  // Environment data
   isProduction = false;
-  isDebugMode = false;
+  maxFileSizeFormatted = '';
 
-  // Typed features array for template
-  featuresArray: Array<{ key: string, value: boolean }> = [];
+  // Import data
+  importData: ClientDataImport | null = null;
 
-  // TypeScript models testing data
-  modelsTestData: any = {};
+  // Sample JSON structure for testing
+  sampleJsonStructure = `[
+  {
+    "Number": "12345",
+    "End_Data": "31/12/24 23:59:59",
+    "Model": "AlarmSystem Pro",
+    "Number_EKA": "EKA-789",
+    "Ime_Obekt": "Офис Център София",
+    "Adres_Obekt": "ул. Витоша 1, София",
+    "Dan_Number": "1234567890",
+    "Phone": "359888123456",
+    "Ime_Firma": "Тест Компания ЕООД",
+    "bulst": "BG1234567890"
+  }
+]`;
 
-  constructor(private environmentService: EnvironmentService) { }
+  constructor(
+    private environmentService: EnvironmentService,
+    private notificationService: NotificationService
+  ) { }
 
   ngOnInit(): void {
     this.loadEnvironmentData();
-    this.loadModelsTestData();
+    this.showWelcomeMessage();
   }
 
+  /**
+   * Load environment configuration
+   */
   private loadEnvironmentData(): void {
-    const appConfig = this.environmentService.getAppConfig();
-
-    this.environmentData = {
-      app: appConfig,
-      smsApi: {
-        baseUrl: this.environmentService.getSMSApiBaseUrl(),
-        hasToken: !!this.environmentService.getSMSApiToken(),
-        testMode: this.environmentService.isSMSTestMode(),
-        characterLimits: {
-          standard: this.environmentService.getSMSCharacterLimit('standard'),
-          unicode: this.environmentService.getSMSCharacterLimit('unicode')
-        }
-      },
-      ui: {
-        maxFileSize: this.formatFileSize(this.environmentService.getMaxFileSize()),
-        tablePageSize: this.environmentService.getTablePageSize(),
-        animationDuration: this.environmentService.getAnimationDuration()
-      }
-    };
-
-    // Convert features object to typed array
-    this.featuresArray = Object.entries(appConfig.features).map(([key, value]) => ({
-      key,
-      value: Boolean(value)
-    }));
-
     this.isProduction = this.environmentService.isProduction();
-    this.isDebugMode = this.environmentService.isDebugMode();
+    this.maxFileSizeFormatted = this.formatFileSize(this.environmentService.getMaxFileSize());
   }
 
-  private loadModelsTestData(): void {
-    // Example ClientRecord (matches the JSON structure)
-    const sampleClient: ClientRecord = {
-      Number: "12345",
-      End_Data: "31/12/24 23:59:59",
-      Model: "AlarmSystem Pro",
-      Number_EKA: "EKA-789",
-      Ime_Obekt: "Офис Център София",
-      Adres_Obekt: "ул. Витоша 1, София",
-      Dan_Number: "1234567890",
-      Phone: "359888123456",
-      Ime_Firma: "Тест Компания ЕООД",
-      bulst: "BG1234567890"
-    };
-
-    // Example ParsedClientRecord (extended with validation)
-    const parsedClient: ParsedClientRecord = {
-      ...sampleClient,
-      id: "client-001",
-      parsedEndDate: new Date('2024-12-31T23:59:59'),
-      formattedPhone: "+359888123456",
-      isValid: true,
-      validationErrors: [],
-      selected: false
-    };
-
-    this.modelsTestData = {
-      clientModels: {
-        sampleClient,
-        parsedClient,
-        validationStatus: this.getValidationStatus(parsedClient),
-      },
-      smsModels: {
-        availableStatuses: Object.values(SMSStatus),
-        encodingTypes: Object.values(SMSEncoding),
-        sampleResponse: {
-          count: 1,
-          list: [{
-            id: "msg-123",
-            points: 0.16,
-            number: "359888123456",
-            date_sent: Date.now() / 1000,
-            status: SMSStatus.QUEUE
-          }]
-        }
-      },
-      appState: {
-        currentView: AppView.DATA_TABLE,
-        notificationTypes: Object.values(NotificationType),
-        sampleNotification: {
-          id: "notif-001",
-          type: NotificationType.SUCCESS,
-          title: "TypeScript Models",
-          message: "All interfaces loaded successfully!",
-          timeout: 5000,
-          dismissible: true,
-          timestamp: new Date(),
-          visible: true
-        }
-      },
-      enums: {
-        validationErrorCodes: Object.values(ValidationErrorCode),
-        smsStatuses: Object.values(SMSStatus),
-        appViews: Object.values(AppView),
-        notificationTypes: Object.values(NotificationType)
-      }
-    };
+  /**
+   * Welcome message
+   */
+  private showWelcomeMessage(): void {
+    this.notificationService.info(
+      'File Upload тестване',
+      'Готово за тестване на JSON файлова обработка 🚀',
+      4000
+    );
   }
 
-  private getValidationStatus(client: ParsedClientRecord): string {
-    return client.isValid ? 'Valid ✅' : 'Invalid ❌';
+  /**
+   * Handle file imported event
+   */
+  onFileImported(importResult: ClientDataImport): void {
+    console.log('File imported:', importResult);
+    // Данните са обработени, но потребителят още не е потвърдил
   }
 
-  private formatFileSize(bytes: number): string {
-    const mb = bytes / (1024 * 1024);
-    return `${mb}MB`;
+  /**
+   * Handle import confirmed event
+   */
+  onImportConfirmed(importResult: ClientDataImport): void {
+    this.importData = importResult;
+    console.log('Import confirmed:', importResult);
+
+    this.notificationService.success(
+      'Импорт завършен',
+      `${importResult.stats.validRecords} записа са готови за обработка`
+    );
   }
 
-  getFeatureIcon(enabled: boolean): string {
-    return enabled ? '✅' : '❌';
+  /**
+   * Start SMS preview (placeholder)
+   */
+  startSMSPreview(): void {
+    this.notificationService.info(
+      'SMS Preview',
+      'Тази функционалност ще бъде достъпна в следващата под-задача',
+      3000
+    );
   }
 
+  /**
+   * Reset import
+   */
+  resetImport(): void {
+    this.importData = null;
+    this.notificationService.info('Reset', 'Готово за нов импорт', 2000);
+  }
+
+  /**
+   * Show test notifications
+   */
+  showTestNotifications(): void {
+    // Test all notification types
+    setTimeout(() => {
+      this.notificationService.success('Test Success', 'Това е success notification');
+    }, 100);
+
+    setTimeout(() => {
+      this.notificationService.info('Test Info', 'Това е info notification');
+    }, 600);
+
+    setTimeout(() => {
+      this.notificationService.warning('Test Warning', 'Това е warning notification');
+    }, 1100);
+
+    setTimeout(() => {
+      this.notificationService.error('Test Error', 'Това е error notification');
+    }, 1600);
+
+    // Test notification with actions
+    setTimeout(() => {
+      this.notificationService.showNotification({
+        type: NotificationType.INFO,
+        title: 'Test Actions',
+        message: 'Notification с действия',
+        timeout: 10000,
+        actions: [
+          {
+            label: 'OK',
+            handler: () => this.notificationService.success('Action', 'OK pressed!'),
+            style: 'primary'
+          },
+          {
+            label: 'Cancel',
+            handler: () => this.notificationService.info('Action', 'Cancel pressed!'),
+            style: 'secondary'
+          }
+        ]
+      });
+    }, 2100);
+  }
+
+  /**
+   * Get mode icon
+   */
   getModeIcon(): string {
     return this.isProduction ? '🚀' : '🛠️';
   }
 
+  /**
+   * Get mode name
+   */
   getModeName(): string {
     return this.isProduction ? 'Production' : 'Development';
   }
 
-  // Helper methods for template
-  getEnumValues(enumObj: any): string[] {
-    return Object.values(enumObj) as string[];
+  /**
+   * Format file size
+   */
+  formatFileSize(bytes: number): string {
+    const mb = bytes / (1024 * 1024);
+    return mb >= 1 ? `${mb.toFixed(1)}MB` : `${(bytes / 1024).toFixed(1)}KB`;
   }
 
-  formatJSON(obj: any): string {
-    return JSON.stringify(obj, null, 2);
+  /**
+   * Format date
+   */
+  formatDate(date: Date): string {
+    return new Intl.DateTimeFormat('bg-BG', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   }
 }

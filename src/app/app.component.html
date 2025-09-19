@@ -1,182 +1,134 @@
-<div class="container">
-    <header class="text-center p-lg">
-        <h1 class="text-primary">{{ title }}</h1>
-        <p class="text-secondary">Phase Setup - Под-задача 3: Core TypeScript Interfaces Testing</p>
-        <div class="mode-indicator">
-            <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
-                {{ getModeIcon() }} {{ getModeName() }} Mode
-            </span>
+<div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+        <div class="container">
+            <h1 class="app-title">{{ title }}</h1>
+            <p class="app-subtitle">
+                <span class="phase-badge">Phase 2 - Под-задача 1</span>
+                File Upload and Data Management - Testing
+            </p>
+            <div class="mode-indicator">
+                <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
+                    {{ getModeIcon() }} {{ getModeName() }} Mode
+                </span>
+            </div>
         </div>
     </header>
 
-    <main class="d-flex justify-center">
-        <div class="config-grid">
+    <!-- Main Content -->
+    <main class="app-main">
+        <div class="container">
 
-            <!-- Environment Configuration -->
-            <div class="card config-card">
-                <h2 class="text-primary">📱 Environment Config</h2>
-                <div class="config-item">
-                    <strong>SMS API:</strong> {{ environmentData.smsApi?.hasToken ? '✅ Ready' : '⏳ Token Missing' }}
-                </div>
-                <div class="config-item">
-                    <strong>Test Mode:</strong> {{ environmentData.smsApi?.testMode ? '🧪 Enabled' : '🚀 Live' }}
-                </div>
-                <div class="config-item">
-                    <strong>Character Limits:</strong>
-                    <div class="sub-config">
-                        Standard: {{ environmentData.smsApi?.characterLimits?.standard }} chars<br>
-                        Unicode: {{ environmentData.smsApi?.characterLimits?.unicode }} chars
-                    </div>
-                </div>
-            </div>
+            <!-- File Upload Section -->
+            <section class="upload-section">
+                <app-file-upload (fileImported)="onFileImported($event)"
+                    (importConfirmed)="onImportConfirmed($event)"></app-file-upload>
+            </section>
 
-            <!-- Client Models Testing -->
-            <div class="card config-card">
-                <h2 class="text-success">👥 Client Models</h2>
-                <div class="config-item">
-                    <strong>Sample ClientRecord:</strong>
-                    <div class="sub-config">
-                        Company: {{ modelsTestData.clientModels?.sampleClient?.Ime_Firma }}<br>
-                        Phone: {{ modelsTestData.clientModels?.sampleClient?.Phone }}<br>
-                        Contract End: {{ modelsTestData.clientModels?.sampleClient?.End_Data }}
-                    </div>
-                </div>
-                <div class="config-item">
-                    <strong>Validation Status:</strong>
-                    <span class="text-success">{{ modelsTestData.clientModels?.validationStatus }}</span>
-                </div>
-                <div class="config-item">
-                    <strong>Parsed Data:</strong>
-                    <div class="sub-config">
-                        ID: {{ modelsTestData.clientModels?.parsedClient?.id }}<br>
-                        Formatted Phone: {{ modelsTestData.clientModels?.parsedClient?.formattedPhone }}
-                    </div>
-                </div>
-            </div>
+            <!-- Import Results Section -->
+            @if (importData) {
+            <section class="results-section card">
+                <h2 class="text-success">📋 Резултати от импорта</h2>
 
-            <!-- SMS Models Testing -->
-            <div class="card config-card">
-                <h2 class="text-info">📨 SMS Models</h2>
-                <div class="config-item">
-                    <strong>Available Statuses:</strong>
-                    <div class="sub-config">
-                        <span *ngFor="let status of modelsTestData.smsModels?.availableStatuses; let last = last">
-                            {{ status }}{{ !last ? ', ' : '' }}
-                        </span>
+                <div class="results-grid">
+                    <div class="result-card success">
+                        <h3>✅ Валидни записи</h3>
+                        <div class="result-value">{{ importData.stats.validRecords }}</div>
+                        <p>Готови за SMS изпращане</p>
                     </div>
-                </div>
-                <div class="config-item">
-                    <strong>Encoding Types:</strong>
-                    <div class="sub-config">
-                        <span *ngFor="let encoding of modelsTestData.smsModels?.encodingTypes; let last = last">
-                            {{ encoding }}{{ !last ? ', ' : '' }}
-                        </span>
-                    </div>
-                </div>
-                <div class="config-item">
-                    <strong>Sample Response:</strong>
-                    <div class="sub-config">
-                        Count: {{ modelsTestData.smsModels?.sampleResponse?.count }}<br>
-                        Message ID: {{ modelsTestData.smsModels?.sampleResponse?.list?.[0]?.id }}
-                    </div>
-                </div>
-            </div>
 
-            <!-- App State Models -->
-            <div class="card config-card">
-                <h2 class="text-warning">🎛️ App State Models</h2>
-                <div class="config-item">
-                    <strong>Current View:</strong>
-                    <span class="text-primary">{{ modelsTestData.appState?.currentView }}</span>
-                </div>
-                <div class="config-item">
-                    <strong>Sample Notification:</strong>
-                    <div class="sub-config">
-                        Type: {{ modelsTestData.appState?.sampleNotification?.type }}<br>
-                        Title: {{ modelsTestData.appState?.sampleNotification?.title }}<br>
-                        Message: {{ modelsTestData.appState?.sampleNotification?.message }}
+                    <div class="result-card info">
+                        <h3>📊 Обща информация</h3>
+                        <div class="result-details">
+                            <div><strong>Файл:</strong> {{ importData.fileInfo.name }}</div>
+                            <div><strong>Размер:</strong> {{ formatFileSize(importData.fileInfo.size) }}</div>
+                            <div><strong>Импортиран:</strong> {{ formatDate(importData.importedAt) }}</div>
+                        </div>
                     </div>
-                </div>
-                <div class="config-item">
-                    <strong>Available Views:</strong>
-                    <div class="sub-config">
-                        <span *ngFor="let view of getEnumValues(modelsTestData.enums?.appViews || {}); let last = last">
-                            {{ view }}{{ !last ? ', ' : '' }}
-                        </span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- TypeScript Enums -->
-            <div class="card config-card">
-                <h2 class="text-accent">🔧 TypeScript Enums</h2>
-                <div class="config-item">
-                    <strong>Validation Error Codes:</strong>
-                    <div class="sub-config">
-                        <span
-                            *ngFor="let code of getEnumValues(modelsTestData.enums?.validationErrorCodes || {}); let last = last">
-                            {{ code }}{{ !last ? ', ' : '' }}
-                        </span>
+                    @if (importData.stats.invalidRecords > 0) {
+                    <div class="result-card warning">
+                        <h3>⚠️ Проблемни записи</h3>
+                        <div class="result-value">{{ importData.stats.invalidRecords }}</div>
+                        <p>Записи с грешки във валидацията</p>
                     </div>
+                    }
                 </div>
-                <div class="config-item">
-                    <strong>SMS Statuses:</strong>
-                    <div class="sub-config">
-                        <span
-                            *ngFor="let status of getEnumValues(modelsTestData.enums?.smsStatuses || {}); let last = last">
-                            {{ status }}{{ !last ? ', ' : '' }}
-                        </span>
-                    </div>
-                </div>
-                <div class="config-item">
-                    <strong>Notification Types:</strong>
-                    <div class="sub-config">
-                        <span
-                            *ngFor="let type of getEnumValues(modelsTestData.enums?.notificationTypes || {}); let last = last">
-                            {{ type }}{{ !last ? ', ' : '' }}
-                        </span>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Features Configuration -->
-            <div class="card config-card">
-                <h2 class="text-success">🎯 Feature Flags</h2>
-                <div class="feature-list">
-                    <div class="feature-item" *ngFor="let feature of featuresArray">
-                        <span class="feature-name">{{ feature.key }}:</span>
-                        <span class="feature-status">{{ getFeatureIcon(feature.value) }}</span>
+                <!-- Sample Records Preview -->
+                @if (importData.validRecords.length > 0) {
+                <div class="sample-records">
+                    <h3>👥 Примерни записи (първите 3)</h3>
+                    <div class="records-preview">
+                        @for (record of importData.validRecords.slice(0, 3); track record.id) {
+                        <div class="record-card">
+                            <div class="record-header">
+                                <strong>{{ record.Ime_Firma }}</strong>
+                                <span class="record-id">{{ record.Number }}</span>
+                            </div>
+                            <div class="record-details">
+                                <div><strong>Телефон:</strong> {{ record.formattedPhone }}</div>
+                                <div><strong>Обект:</strong> {{ record.Ime_Obekt }}</div>
+                                <div><strong>Договор изтича:</strong> {{ record.End_Data }}</div>
+                            </div>
+                        </div>
+                        }
                     </div>
                 </div>
-            </div>
+                }
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button class="btn btn-primary" (click)="startSMSPreview()"
+                        [disabled]="!importData || importData.validRecords.length === 0" type="button">
+                        📨 Продължи към SMS Preview
+                    </button>
+                    <button class="btn btn-outline" (click)="resetImport()" type="button">
+                        🔄 Нов импорт
+                    </button>
+                    <button class="btn btn-outline" (click)="showTestNotifications()" type="button">
+                        🧪 Тест Notifications
+                    </button>
+                </div>
+            </section>
+            }
+
+            <!-- Testing Instructions -->
+            <section class="testing-instructions card">
+                <h3 class="text-primary">🧪 Инструкции за тестване</h3>
+                <div class="test-steps">
+                    <div class="test-step">
+                        <strong>1. Тест drag & drop:</strong> Прехвърлете JSON файл в upload зоната
+                    </div>
+                    <div class="test-step">
+                        <strong>2. Тест file picker:</strong> Щракнете в зоната за избор на файл
+                    </div>
+                    <div class="test-step">
+                        <strong>3. Тест валидация:</strong> Опитайте с невалиден файл (не JSON)
+                    </div>
+                    <div class="test-step">
+                        <strong>4. Тест голям файл:</strong> Опитайте с файл над {{ maxFileSizeFormatted }}
+                    </div>
+                    <div class="test-step">
+                        <strong>5. Тест notifications:</strong> Щракнете "Тест Notifications" бутона
+                    </div>
+                    <div class="test-step">
+                        <strong>6. Тест JSON structure:</strong> Използвайте JSON с ClientRecord структура
+                    </div>
+                </div>
+
+                <!-- Sample JSON Structure -->
+                <div class="json-sample">
+                    <h4>📄 Примерна JSON структура:</h4>
+                    <pre><code>{{ sampleJsonStructure }}</code></pre>
+                </div>
+            </section>
 
         </div>
     </main>
 
-    <!-- TypeScript Models Testing Instructions -->
-    <section class="testing-instructions card">
-        <h3 class="text-primary">🧪 TypeScript Interfaces Testing Instructions</h3>
-        <div class="test-steps">
-            <div class="test-step">
-                <strong>1. Client Models:</strong> Check that ClientRecord fields are displayed correctly
-            </div>
-            <div class="test-step">
-                <strong>2. SMS Models:</strong> Verify SMS statuses and encoding types are shown
-            </div>
-            <div class="test-step">
-                <strong>3. App State:</strong> Confirm notification and view types are loaded
-            </div>
-            <div class="test-step">
-                <strong>4. TypeScript Enums:</strong> All enum values should be properly typed
-            </div>
-            <div class="test-step">
-                <strong>5. No TypeScript Errors:</strong> Check VS Code shows no red errors
-            </div>
-            <div class="test-step">
-                <strong>6. IntelliSense:</strong> Test auto-completion works with <code>Ctrl+Space</code>
-            </div>
-        </div>
-    </section>
+    <!-- Notifications -->
+    <app-notification></app-notification>
 </div>
 
 <router-outlet></router-outlet>

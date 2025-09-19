@@ -1,6 +1,12 @@
 // Environment configuration service
 export { EnvironmentService } from './environment.service';
 
+// File management service
+export { FileService } from './file.service';
+
+// Notification service
+export { NotificationService } from './notification.service';
+
 // Re-export environment interfaces
 export type {
     Environment,
@@ -8,7 +14,7 @@ export type {
     AppConfig,
     ErrorHandlingConfig,
     DevelopmentConfig,
-    ProductionSpecificConfig // Updated name
+    ProductionSpecificConfig
 } from '../../../environments/environment.interface';
 
 // Re-export all models for easy access

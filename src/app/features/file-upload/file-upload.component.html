@@ -1,0 +1,119 @@
+<div class="file-upload-container">
+    <div class="file-upload-header">
+        <h2 class="text-primary">📁 Качване на JSON файл</h2>
+        <p class="text-secondary">
+            Прехвърлете JSON файл с клиентски данни или щракнете за да изберете файл
+        </p>
+    </div>
+
+    <!-- Drag & Drop зона -->
+    <div class="file-drop-zone" [class.drag-over]="isDragging" [class.processing]="loadingState.isLoading"
+        [class.error]="hasError" (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)"
+        (drop)="onDrop($event)" (click)="openFileDialog()">
+        @if (loadingState.isLoading) {
+        <div class="upload-state processing">
+            <div class="spinner"></div>
+            <div class="upload-title">{{ loadingState.message || 'Обработване на файл...' }}</div>
+            @if (loadingState.progress !== undefined) {
+            <div class="progress-bar">
+                <div class="progress-fill" [style.width.%]="loadingState.progress"></div>
+            </div>
+            <div class="progress-text">{{ loadingState.progress }}%</div>
+            }
+        </div>
+        } @else if (hasError) {
+        <div class="upload-state error">
+            <div class="upload-icon">❌</div>
+            <div class="upload-title">Грешка при обработка</div>
+            <div class="upload-subtitle">{{ errorMessage }}</div>
+            <button class="btn btn-outline" (click)="clearError()" type="button">
+                Опитайте отново
+            </button>
+        </div>
+        } @else if (importResult) {
+        <div class="upload-state success">
+            <div class="upload-icon">✅</div>
+            <div class="upload-title">Файл обработен успешно!</div>
+            <div class="upload-subtitle">
+                {{ importResult.stats.validRecords }} валидни записа от общо {{ importResult.stats.totalRecords }}
+            </div>
+            <div class="upload-actions">
+                <button class="btn btn-primary" (click)="confirmImport()" type="button">
+                    Продължи с обработените данни
+                </button>
+                <button class="btn btn-outline" (click)="reset()" type="button">
+                    Качи друг файл
+                </button>
+            </div>
+        </div>
+        } @else {
+        <div class="upload-state default">
+            <div class="upload-icon">
+                @if (isDragging) {
+                📤
+                } @else {
+                📁
+                }
+            </div>
+            <div class="upload-title">
+                @if (isDragging) {
+                Пуснете файла тук
+                } @else {
+                Прехвърлете JSON файл или щракнете за избор
+                }
+            </div>
+            <div class="upload-subtitle">
+                Максимален размер: {{ maxFileSizeFormatted }}
+            </div>
+        </div>
+        }
+    </div>
+
+    <!-- File input (скрит) -->
+    <input #fileInput type="file" accept=".json,application/json" style="display: none"
+        (change)="onFileSelected($event)" />
+
+    <!-- Статистики за резултата -->
+    @if (importResult && !loadingState.isLoading) {
+    <div class="import-stats">
+        <h3>📊 Статистики за импорта</h3>
+        <div class="stats-grid">
+            <div class="stat-item success">
+                <div class="stat-value">{{ importResult.stats.validRecords }}</div>
+                <div class="stat-label">Валидни записа</div>
+            </div>
+            <div class="stat-item error">
+                <div class="stat-value">{{ importResult.stats.invalidRecords }}</div>
+                <div class="stat-label">Невалидни записа</div>
+            </div>
+            <div class="stat-item info">
+                <div class="stat-value">{{ importResult.stats.totalRecords }}</div>
+                <div class="stat-label">Общо записа</div>
+            </div>
+            <div class="stat-item warning">
+                <div class="stat-value">{{ importResult.fileInfo.size | fileSize }}</div>
+                <div class="stat-label">Размер на файл</div>
+            </div>
+        </div>
+
+        @if (importResult.invalidRecords.length > 0) {
+        <div class="invalid-records">
+            <h4 class="text-error">⚠️ Грешки в записите</h4>
+            <div class="error-list">
+                @for (invalid of importResult.invalidRecords.slice(0, 5); track invalid.lineNumber) {
+                <div class="error-item">
+                    <strong>Ред {{ invalid.lineNumber }}:</strong>
+                    <span>{{ invalid.errors.join(', ') }}</span>
+                </div>
+                }
+                @if (importResult.invalidRecords.length > 5) {
+                <div class="error-item more">
+                    И още {{ importResult.invalidRecords.length - 5 }} грешки...
+                </div>
+                }
+            </div>
+        </div>
+        }
+    </div>
+    }
+</div>
