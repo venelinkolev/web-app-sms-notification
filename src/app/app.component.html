@@ -1,7 +1,7 @@
 <div class="container">
     <header class="text-center p-lg">
         <h1 class="text-primary">{{ title }}</h1>
-        <p class="text-secondary">Phase Setup - Под-задача 2: Environment Configuration Testing</p>
+        <p class="text-secondary">Phase Setup - Под-задача 3: Core TypeScript Interfaces Testing</p>
         <div class="mode-indicator">
             <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
                 {{ getModeIcon() }} {{ getModeName() }} Mode
@@ -12,46 +12,129 @@
     <main class="d-flex justify-center">
         <div class="config-grid">
 
-            <!-- App Configuration -->
+            <!-- Environment Configuration -->
             <div class="card config-card">
-                <h2 class="text-primary">📱 App Configuration</h2>
+                <h2 class="text-primary">📱 Environment Config</h2>
                 <div class="config-item">
-                    <strong>Name:</strong> {{ environmentData.app?.name }}
+                    <strong>SMS API:</strong> {{ environmentData.smsApi?.hasToken ? '✅ Ready' : '⏳ Token Missing' }}
                 </div>
                 <div class="config-item">
-                    <strong>Version:</strong> {{ environmentData.app?.version }}
-                </div>
-                <div class="config-item">
-                    <strong>Debug Mode:</strong>
-                    <span [class]="isDebugMode ? 'text-warning' : 'text-success'">
-                        {{ isDebugMode ? '🐛 Enabled' : '✅ Disabled' }}
-                    </span>
-                </div>
-            </div>
-
-            <!-- SMS API Configuration -->
-            <div class="card config-card">
-                <h2 class="text-info">📨 SMS API Configuration</h2>
-                <div class="config-item">
-                    <strong>Base URL:</strong> {{ environmentData.smsApi?.baseUrl }}
-                </div>
-                <div class="config-item">
-                    <strong>API Token:</strong>
-                    <span [class]="environmentData.smsApi?.hasToken ? 'text-success' : 'text-error'">
-                        {{ environmentData.smsApi?.hasToken ? '✅ Configured' : '❌ Missing' }}
-                    </span>
-                </div>
-                <div class="config-item">
-                    <strong>Test Mode:</strong>
-                    <span [class]="environmentData.smsApi?.testMode ? 'text-warning' : 'text-success'">
-                        {{ environmentData.smsApi?.testMode ? '🧪 Enabled' : '🚀 Live' }}
-                    </span>
+                    <strong>Test Mode:</strong> {{ environmentData.smsApi?.testMode ? '🧪 Enabled' : '🚀 Live' }}
                 </div>
                 <div class="config-item">
                     <strong>Character Limits:</strong>
                     <div class="sub-config">
                         Standard: {{ environmentData.smsApi?.characterLimits?.standard }} chars<br>
                         Unicode: {{ environmentData.smsApi?.characterLimits?.unicode }} chars
+                    </div>
+                </div>
+            </div>
+
+            <!-- Client Models Testing -->
+            <div class="card config-card">
+                <h2 class="text-success">👥 Client Models</h2>
+                <div class="config-item">
+                    <strong>Sample ClientRecord:</strong>
+                    <div class="sub-config">
+                        Company: {{ modelsTestData.clientModels?.sampleClient?.Ime_Firma }}<br>
+                        Phone: {{ modelsTestData.clientModels?.sampleClient?.Phone }}<br>
+                        Contract End: {{ modelsTestData.clientModels?.sampleClient?.End_Data }}
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>Validation Status:</strong>
+                    <span class="text-success">{{ modelsTestData.clientModels?.validationStatus }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Parsed Data:</strong>
+                    <div class="sub-config">
+                        ID: {{ modelsTestData.clientModels?.parsedClient?.id }}<br>
+                        Formatted Phone: {{ modelsTestData.clientModels?.parsedClient?.formattedPhone }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- SMS Models Testing -->
+            <div class="card config-card">
+                <h2 class="text-info">📨 SMS Models</h2>
+                <div class="config-item">
+                    <strong>Available Statuses:</strong>
+                    <div class="sub-config">
+                        <span *ngFor="let status of modelsTestData.smsModels?.availableStatuses; let last = last">
+                            {{ status }}{{ !last ? ', ' : '' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>Encoding Types:</strong>
+                    <div class="sub-config">
+                        <span *ngFor="let encoding of modelsTestData.smsModels?.encodingTypes; let last = last">
+                            {{ encoding }}{{ !last ? ', ' : '' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>Sample Response:</strong>
+                    <div class="sub-config">
+                        Count: {{ modelsTestData.smsModels?.sampleResponse?.count }}<br>
+                        Message ID: {{ modelsTestData.smsModels?.sampleResponse?.list?.[0]?.id }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- App State Models -->
+            <div class="card config-card">
+                <h2 class="text-warning">🎛️ App State Models</h2>
+                <div class="config-item">
+                    <strong>Current View:</strong>
+                    <span class="text-primary">{{ modelsTestData.appState?.currentView }}</span>
+                </div>
+                <div class="config-item">
+                    <strong>Sample Notification:</strong>
+                    <div class="sub-config">
+                        Type: {{ modelsTestData.appState?.sampleNotification?.type }}<br>
+                        Title: {{ modelsTestData.appState?.sampleNotification?.title }}<br>
+                        Message: {{ modelsTestData.appState?.sampleNotification?.message }}
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>Available Views:</strong>
+                    <div class="sub-config">
+                        <span *ngFor="let view of getEnumValues(modelsTestData.enums?.appViews || {}); let last = last">
+                            {{ view }}{{ !last ? ', ' : '' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TypeScript Enums -->
+            <div class="card config-card">
+                <h2 class="text-accent">🔧 TypeScript Enums</h2>
+                <div class="config-item">
+                    <strong>Validation Error Codes:</strong>
+                    <div class="sub-config">
+                        <span
+                            *ngFor="let code of getEnumValues(modelsTestData.enums?.validationErrorCodes || {}); let last = last">
+                            {{ code }}{{ !last ? ', ' : '' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>SMS Statuses:</strong>
+                    <div class="sub-config">
+                        <span
+                            *ngFor="let status of getEnumValues(modelsTestData.enums?.smsStatuses || {}); let last = last">
+                            {{ status }}{{ !last ? ', ' : '' }}
+                        </span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <strong>Notification Types:</strong>
+                    <div class="sub-config">
+                        <span
+                            *ngFor="let type of getEnumValues(modelsTestData.enums?.notificationTypes || {}); let last = last">
+                            {{ type }}{{ !last ? ', ' : '' }}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -67,41 +150,30 @@
                 </div>
             </div>
 
-            <!-- UI Configuration -->
-            <div class="card config-card">
-                <h2 class="text-warning">🎨 UI Configuration</h2>
-                <div class="config-item">
-                    <strong>Max File Size:</strong> {{ environmentData.ui?.maxFileSize }}
-                </div>
-                <div class="config-item">
-                    <strong>Table Page Size:</strong> {{ environmentData.ui?.tablePageSize }} items
-                </div>
-                <div class="config-item">
-                    <strong>Animation Duration:</strong> {{ environmentData.ui?.animationDuration }}ms
-                </div>
-            </div>
-
         </div>
     </main>
 
-    <!-- Testing Instructions -->
+    <!-- TypeScript Models Testing Instructions -->
     <section class="testing-instructions card">
-        <h3 class="text-primary">🧪 Environment Testing Instructions</h3>
+        <h3 class="text-primary">🧪 TypeScript Interfaces Testing Instructions</h3>
         <div class="test-steps">
             <div class="test-step">
-                <strong>1. Development Mode:</strong> Verify you see "🛠️ Development Mode" badge above
+                <strong>1. Client Models:</strong> Check that ClientRecord fields are displayed correctly
             </div>
             <div class="test-step">
-                <strong>2. SMS API Token:</strong> Should show "❌ Missing" (normal for initial setup)
+                <strong>2. SMS Models:</strong> Verify SMS statuses and encoding types are shown
             </div>
             <div class="test-step">
-                <strong>3. Test Mode:</strong> Should show "🧪 Enabled" in development
+                <strong>3. App State:</strong> Confirm notification and view types are loaded
             </div>
             <div class="test-step">
-                <strong>4. All Features:</strong> Should show "✅" for all feature flags
+                <strong>4. TypeScript Enums:</strong> All enum values should be properly typed
             </div>
             <div class="test-step">
-                <strong>5. Production Build:</strong> Run <code>npm run build</code> to test production config
+                <strong>5. No TypeScript Errors:</strong> Check VS Code shows no red errors
+            </div>
+            <div class="test-step">
+                <strong>6. IntelliSense:</strong> Test auto-completion works with <code>Ctrl+Space</code>
             </div>
         </div>
     </section>

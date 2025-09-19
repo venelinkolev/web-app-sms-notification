@@ -10,3 +10,6 @@ export type {
     DevelopmentConfig,
     ProductionSpecificConfig // Updated name
 } from '../../../environments/environment.interface';
+
+// Re-export all models for easy access
+export * from '../models';

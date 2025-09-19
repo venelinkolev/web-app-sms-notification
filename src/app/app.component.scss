@@ -1,3 +1,5 @@
+// AppComponent specific styles for Environment Testing
+
 header {
   background: linear-gradient(135deg, var(--primary-light), var(--primary-color));
   color: white;
@@ -141,6 +143,7 @@ header {
 .text-warning { color: var(--warning-color) !important; }
 .text-error { color: var(--error-color) !important; }
 .text-info { color: var(--info-color) !important; }
+.text-accent { color: var(--accent-color) !important; }
 
 // Animation for smooth loading
 main {
