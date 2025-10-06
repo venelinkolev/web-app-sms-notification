@@ -182,9 +182,10 @@ export class FileService {
      */
     private validateClientRecord(record: any): ValidationResult {
         const errors: ValidationError[] = [];
+        // Задължителни полета (Ime_Obekt, Adres_Obekt, Dan_Number са optional)
         const requiredFields: (keyof ClientRecord)[] = [
-            'Number', 'End_Data', 'Model', 'Number_EKA', 'Ime_Obekt',
-            'Adres_Obekt', 'Dan_Number', 'Phone', 'Ime_Firma', 'bulst'
+            'Number', 'End_Data', 'Model', 'Number_EKA',
+            'Phone', 'Ime_Firma', 'bulst'
         ];
 
         // Проверка за задължителни полета

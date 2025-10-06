@@ -37,18 +37,18 @@ export class AppComponent implements OnInit {
 
   // Sample JSON structure for testing
   sampleJsonStructure = `[
-  {
-    "Number": "12345",
+  "Number": "12345",
     "End_Data": "31/12/24 23:59:59",
     "Model": "AlarmSystem Pro",
     "Number_EKA": "EKA-789",
-    "Ime_Obekt": "Офис Център София",
-    "Adres_Obekt": "ул. Витоша 1, София",
-    "Dan_Number": "1234567890",
     "Phone": "359888123456",
     "Ime_Firma": "Тест Компания ЕООД",
-    "bulst": "BG1234567890"
-  }
+    "bulst": "BG1234567890",
+    
+    // Optional полета (могат да липсват):
+    "Ime_Obekt": "Офис Център София",
+    "Adres_Obekt": "ул. Витоша 1, София",
+    "Dan_Number": "1234567890"
 ]`;
 
   constructor(

@@ -15,14 +15,14 @@ export interface ClientRecord {
     /** EKA equipment number */
     Number_EKA: string;
 
-    /** Object/site name */
-    Ime_Obekt: string;
+    /** Object/site name - OPTIONAL */
+    Ime_Obekt?: string;
 
-    /** Object/site address */
-    Adres_Obekt: string;
+    /** Object/site address - OPTIONAL */
+    Adres_Obekt?: string;
 
-    /** Tax number */
-    Dan_Number: string;
+    /** Tax number - OPTIONAL */
+    Dan_Number?: string;
 
     /** Contact phone number */
     Phone: string;
