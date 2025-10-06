@@ -1,0 +1,167 @@
+<div class="client-list-container">
+
+    <!-- Header with statistics -->
+    <div class="list-header">
+        <h2>👥 Клиентски записи</h2>
+        <div class="stats-bar">
+            <div class="stat-badge">
+                <span class="label">Общо:</span>
+                <span class="value">{{ statistics.total }}</span>
+            </div>
+            <div class="stat-badge selected">
+                <span class="label">Избрани:</span>
+                <span class="value">{{ statistics.selected }}</span>
+            </div>
+            <div class="stat-badge filtered">
+                <span class="label">Филтрирани:</span>
+                <span class="value">{{ statistics.filtered }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section card">
+        <h3>🔍 Филтри</h3>
+        <div class="filters-grid">
+            <div class="filter-field">
+                <label>Търсене</label>
+                <input type="text" class="form-control" placeholder="Търси във всички полета..."
+                    [(ngModel)]="searchText" (ngModelChange)="onSearchChange()" />
+            </div>
+            <div class="filter-field">
+                <label>Фирма</label>
+                <input type="text" class="form-control" placeholder="Име на фирма..." [(ngModel)]="companyFilter"
+                    (ngModelChange)="onCompanyFilterChange()" />
+            </div>
+            <div class="filter-field">
+                <label>Телефон</label>
+                <input type="text" class="form-control" placeholder="Телефонен номер..." [(ngModel)]="phoneFilter"
+                    (ngModelChange)="onPhoneFilterChange()" />
+            </div>
+            <div class="filter-field">
+                <button class="btn btn-outline" (click)="clearFilters()" type="button">
+                    ✕ Изчисти
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selection actions -->
+    @if (selection.selectedCount > 0) {
+    <div class="selection-actions card">
+        <div class="selection-info">
+            <strong>{{ selection.selectedCount }}</strong> избрани записа
+        </div>
+        <div class="action-buttons">
+            <button class="btn btn-primary" (click)="onSendSMS()" type="button">
+                📨 Изпрати SMS
+            </button>
+            <button class="btn btn-outline" (click)="deselectAll()" type="button">
+                ✕ Премахни избора
+            </button>
+        </div>
+    </div>
+    }
+
+    <!-- Data table -->
+    <div class="table-container card">
+        <table class="client-table">
+            <thead>
+                <tr>
+                    <th class="checkbox-cell">
+                        <input type="checkbox" [checked]="selection.allSelected"
+                            [indeterminate]="selection.indeterminate" (change)="toggleSelectAll()" />
+                    </th>
+                    <th (click)="sortBy('Number')">
+                        № Запис
+                        @if (sorting.field === 'Number') {
+                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
+                        }
+                    </th>
+                    <th (click)="sortBy('Ime_Firma')">
+                        Фирма
+                        @if (sorting.field === 'Ime_Firma') {
+                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
+                        }
+                    </th>
+                    <th>Телефон</th>
+                    <th>Модел</th>
+                    <th (click)="sortBy('parsedEndDate')">
+                        Изтича на
+                        @if (sorting.field === 'parsedEndDate') {
+                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
+                        }
+                    </th>
+                    <th>Обект</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (paginatedData.records.length === 0) {
+                <tr>
+                    <td colspan="7" class="empty-state">
+                        @if (statistics.filtered === 0 && statistics.total > 0) {
+                        <div class="empty-icon">🔍</div>
+                        <div class="empty-text">Няма резултати от филтрите</div>
+                        <button class="btn btn-outline" (click)="clearFilters()" type="button">
+                            Изчисти филтрите
+                        </button>
+                        } @else {
+                        <div class="empty-icon">📋</div>
+                        <div class="empty-text">Няма заредени данни</div>
+                        }
+                    </td>
+                </tr>
+                } @else {
+                @for (record of paginatedData.records; track record.id) {
+                <tr [class.selected]="record.selected" (click)="toggleSelection(record.id)">
+                    <td class="checkbox-cell" (click)="$event.stopPropagation()">
+                        <input type="checkbox" [checked]="record.selected" (change)="toggleSelection(record.id)" />
+                    </td>
+                    <td>{{ record.Number }}</td>
+                    <td class="company-cell">
+                        <strong>{{ record.Ime_Firma }}</strong>
+                    </td>
+                    <td>{{ record.formattedPhone }}</td>
+                    <td>{{ record.Model }}</td>
+                    <td>{{ formatDate(record.parsedEndDate) }}</td>
+                    <td>{{ record.Ime_Obekt || '-' }}</td>
+                </tr>
+                }
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (paginatedData.totalPages > 1) {
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Показани {{ paginatedData.page * paginatedData.pageSize + 1 }} -
+            {{ Math.min((paginatedData.page + 1) * paginatedData.pageSize, paginatedData.totalRecords) }}
+            от {{ paginatedData.totalRecords }}
+        </div>
+        <div class="pagination-controls">
+            <button class="btn btn-outline" [disabled]="!paginatedData.hasPreviousPage" (click)="previousPage()"
+                type="button">
+                ← Предишна
+            </button>
+            <span class="page-indicator">
+                Страница {{ paginatedData.page + 1 }} от {{ paginatedData.totalPages }}
+            </span>
+            <button class="btn btn-outline" [disabled]="!paginatedData.hasNextPage" (click)="nextPage()" type="button">
+                Следваща →
+            </button>
+        </div>
+        <div class="page-size-selector">
+            <label>Записи на страница:</label>
+            <select class="form-control" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+            </select>
+        </div>
+    </div>
+    }
+
+</div>

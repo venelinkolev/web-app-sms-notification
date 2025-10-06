@@ -1,3 +1,4 @@
+// src/app/app.component.ts
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -5,9 +6,11 @@ import { CommonModule } from '@angular/common';
 // Services
 import { EnvironmentService } from './core/services/environment.service';
 import { NotificationService } from './core/services/notification.service';
+import { DataService } from './core/services/data.service';
 
 // Components
 import { FileUploadComponent } from './features/file-upload/file-upload.component';
+import { ClientListComponent } from './features/client-list/client-list.component';
 import { NotificationComponent } from './shared/components/notification/notification.component';
 
 // Models
@@ -20,10 +23,11 @@ import { ClientDataImport, NotificationType } from './core/models';
     RouterOutlet,
     CommonModule,
     FileUploadComponent,
+    ClientListComponent,
     NotificationComponent
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss',
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
   title = 'SMS Notification Application';
@@ -34,10 +38,12 @@ export class AppComponent implements OnInit {
 
   // Import data
   importData: ClientDataImport | null = null;
+  hasData = false;
 
   // Sample JSON structure for testing
   sampleJsonStructure = `[
-  "Number": "12345",
+  {
+    "Number": "12345",
     "End_Data": "31/12/24 23:59:59",
     "Model": "AlarmSystem Pro",
     "Number_EKA": "EKA-789",
@@ -49,11 +55,13 @@ export class AppComponent implements OnInit {
     "Ime_Obekt": "Офис Център София",
     "Adres_Obekt": "ул. Витоша 1, София",
     "Dan_Number": "1234567890"
+  }
 ]`;
 
   constructor(
     private environmentService: EnvironmentService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private dataService: DataService
   ) { }
 
   ngOnInit(): void {
@@ -93,6 +101,11 @@ export class AppComponent implements OnInit {
    */
   onImportConfirmed(importResult: ClientDataImport): void {
     this.importData = importResult;
+    this.hasData = true;
+
+    // Load data in DataService
+    this.dataService.loadData(importResult);
+
     console.log('Import confirmed:', importResult);
 
     this.notificationService.success(
@@ -117,6 +130,8 @@ export class AppComponent implements OnInit {
    */
   resetImport(): void {
     this.importData = null;
+    this.hasData = false;
+    this.dataService.reset();
     this.notificationService.info('Reset', 'Готово за нов импорт', 2000);
   }
 

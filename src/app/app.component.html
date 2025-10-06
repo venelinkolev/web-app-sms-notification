@@ -4,8 +4,8 @@
         <div class="container">
             <h1 class="app-title">{{ title }}</h1>
             <p class="app-subtitle">
-                <span class="phase-badge">Phase 2 - Под-задача 1</span>
-                File Upload and Data Management - Testing
+                <span class="phase-badge">Phase 2 - Под-задача 2</span>
+                Data Service and Client List - Testing
             </p>
             <div class="mode-indicator">
                 <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
@@ -25,75 +25,15 @@
                     (importConfirmed)="onImportConfirmed($event)"></app-file-upload>
             </section>
 
-            <!-- Import Results Section -->
-            @if (importData) {
-            <section class="results-section card">
-                <h2 class="text-success">📋 Резултати от импорта</h2>
-
-                <div class="results-grid">
-                    <div class="result-card success">
-                        <h3>✅ Валидни записи</h3>
-                        <div class="result-value">{{ importData.stats.validRecords }}</div>
-                        <p>Готови за SMS изпращане</p>
-                    </div>
-
-                    <div class="result-card info">
-                        <h3>📊 Обща информация</h3>
-                        <div class="result-details">
-                            <div><strong>Файл:</strong> {{ importData.fileInfo.name }}</div>
-                            <div><strong>Размер:</strong> {{ formatFileSize(importData.fileInfo.size) }}</div>
-                            <div><strong>Импортиран:</strong> {{ formatDate(importData.importedAt) }}</div>
-                        </div>
-                    </div>
-
-                    @if (importData.stats.invalidRecords > 0) {
-                    <div class="result-card warning">
-                        <h3>⚠️ Проблемни записи</h3>
-                        <div class="result-value">{{ importData.stats.invalidRecords }}</div>
-                        <p>Записи с грешки във валидацията</p>
-                    </div>
-                    }
-                </div>
-
-                <!-- Sample Records Preview -->
-                @if (importData.validRecords.length > 0) {
-                <div class="sample-records">
-                    <h3>👥 Примерни записи (първите 3)</h3>
-                    <div class="records-preview">
-                        @for (record of importData.validRecords.slice(0, 3); track record.id) {
-                        <div class="record-card">
-                            <div class="record-header">
-                                <strong>{{ record.Ime_Firma }}</strong>
-                                <span class="record-id">{{ record.Number }}</span>
-                            </div>
-                            <div class="record-details">
-                                <div><strong>Телефон:</strong> {{ record.formattedPhone }}</div>
-                                <div><strong>Обект:</strong> {{ record.Ime_Obekt }}</div>
-                                <div><strong>Договор изтича:</strong> {{ record.End_Data }}</div>
-                            </div>
-                        </div>
-                        }
-                    </div>
-                </div>
-                }
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button class="btn btn-primary" (click)="startSMSPreview()"
-                        [disabled]="!importData || importData.validRecords.length === 0" type="button">
-                        📨 Продължи към SMS Preview
-                    </button>
-                    <button class="btn btn-outline" (click)="resetImport()" type="button">
-                        🔄 Нов импорт
-                    </button>
-                    <button class="btn btn-outline" (click)="showTestNotifications()" type="button">
-                        🧪 Тест Notifications
-                    </button>
-                </div>
+            <!-- Client List Section -->
+            @if (hasData) {
+            <section class="client-list-section">
+                <app-client-list></app-client-list>
             </section>
             }
 
             <!-- Testing Instructions -->
+            @if (!hasData) {
             <section class="testing-instructions card">
                 <h3 class="text-primary">🧪 Инструкции за тестване</h3>
                 <div class="test-steps">
@@ -110,10 +50,16 @@
                         <strong>4. Тест голям файл:</strong> Опитайте с файл над {{ maxFileSizeFormatted }}
                     </div>
                     <div class="test-step">
-                        <strong>5. Тест notifications:</strong> Щракнете "Тест Notifications" бутона
+                        <strong>5. Тест filtering:</strong> Използвайте search и filters в таблицата
                     </div>
                     <div class="test-step">
-                        <strong>6. Тест JSON structure:</strong> Използвайте JSON с ClientRecord структура
+                        <strong>6. Тест sorting:</strong> Кликнете на column headers за сортиране
+                    </div>
+                    <div class="test-step">
+                        <strong>7. Тест selection:</strong> Изберете записи с checkboxes
+                    </div>
+                    <div class="test-step">
+                        <strong>8. Тест pagination:</strong> Навигирайте между страниците
                     </div>
                 </div>
 
@@ -123,6 +69,7 @@
                     <pre><code>{{ sampleJsonStructure }}</code></pre>
                 </div>
             </section>
+            }
 
         </div>
     </main>

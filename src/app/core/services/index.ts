@@ -4,6 +4,9 @@ export { EnvironmentService } from './environment.service';
 // File management service
 export { FileService } from './file.service';
 
+// Data management service
+export { DataService } from './data.service';
+
 // Notification service
 export { NotificationService } from './notification.service';
 

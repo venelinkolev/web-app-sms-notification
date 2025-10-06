@@ -72,6 +72,11 @@
   margin-bottom: var(--spacing-xl);
 }
 
+.client-list-section {
+  margin-bottom: var(--spacing-xl);
+  animation: slideInUp 0.6s ease-out;
+}
+
 .results-section {
   margin-bottom: var(--spacing-xl);
   
