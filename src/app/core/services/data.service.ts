@@ -1,4 +1,3 @@
-// src/app/core/services/data.service.ts
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, combineLatest } from 'rxjs';
 import { map, distinctUntilChanged } from 'rxjs/operators';
@@ -71,8 +70,7 @@ export class DataService {
         this.processedData,
         this.pagination$
     ]).pipe(
-        map(([data, pagination]) => this.paginateData(data, pagination.page, pagination.pageSize)),
-        distinctUntilChanged()
+        map(([data, pagination]) => this.paginateData(data, pagination.page, pagination.pageSize))
     );
 
     /**

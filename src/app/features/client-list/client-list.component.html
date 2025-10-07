@@ -63,73 +63,101 @@
     </div>
     }
 
-    <!-- Data table -->
+    <!-- CDK Table -->
     <div class="table-container card">
-        <table class="client-table">
-            <thead>
-                <tr>
-                    <th class="checkbox-cell">
-                        <input type="checkbox" [checked]="selection.allSelected"
-                            [indeterminate]="selection.indeterminate" (change)="toggleSelectAll()" />
-                    </th>
-                    <th (click)="sortBy('Number')">
-                        № Запис
-                        @if (sorting.field === 'Number') {
-                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
-                        }
-                    </th>
-                    <th (click)="sortBy('Ime_Firma')">
-                        Фирма
-                        @if (sorting.field === 'Ime_Firma') {
-                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
-                        }
-                    </th>
-                    <th>Телефон</th>
-                    <th>Модел</th>
-                    <th (click)="sortBy('parsedEndDate')">
-                        Изтича на
-                        @if (sorting.field === 'parsedEndDate') {
-                        <span class="sort-icon">{{ sorting.direction === 'asc' ? '↑' : '↓' }}</span>
-                        }
-                    </th>
-                    <th>Обект</th>
-                </tr>
-            </thead>
-            <tbody>
-                @if (paginatedData.records.length === 0) {
-                <tr>
-                    <td colspan="7" class="empty-state">
-                        @if (statistics.filtered === 0 && statistics.total > 0) {
-                        <div class="empty-icon">🔍</div>
-                        <div class="empty-text">Няма резултати от филтрите</div>
-                        <button class="btn btn-outline" (click)="clearFilters()" type="button">
-                            Изчисти филтрите
-                        </button>
-                        } @else {
-                        <div class="empty-icon">📋</div>
-                        <div class="empty-text">Няма заредени данни</div>
-                        }
-                    </td>
-                </tr>
-                } @else {
-                @for (record of paginatedData.records; track record.id) {
-                <tr [class.selected]="record.selected" (click)="toggleSelection(record.id)">
-                    <td class="checkbox-cell" (click)="$event.stopPropagation()">
-                        <input type="checkbox" [checked]="record.selected" (change)="toggleSelection(record.id)" />
-                    </td>
-                    <td>{{ record.Number }}</td>
-                    <td class="company-cell">
-                        <strong>{{ record.Ime_Firma }}</strong>
-                    </td>
-                    <td>{{ record.formattedPhone }}</td>
-                    <td>{{ record.Model }}</td>
-                    <td>{{ formatDate(record.parsedEndDate) }}</td>
-                    <td>{{ record.Ime_Obekt || '-' }}</td>
-                </tr>
-                }
-                }
-            </tbody>
+        @if (paginatedData.records.length === 0) {
+        <div class="empty-state">
+            @if (statistics.filtered === 0 && statistics.total > 0) {
+            <div class="empty-icon">🔍</div>
+            <div class="empty-text">Няма резултати от филтрите</div>
+            <button class="btn btn-outline" (click)="clearFilters()" type="button">
+                Изчисти филтрите
+            </button>
+            } @else {
+            <div class="empty-icon">📋</div>
+            <div class="empty-text">Няма заредени данни</div>
+            }
+        </div>
+        } @else {
+        <table cdk-table [dataSource]="dataSource" class="client-table">
+
+            <!-- Checkbox Column -->
+            <ng-container cdkColumnDef="select">
+                <th cdk-header-cell *cdkHeaderCellDef class="checkbox-cell">
+                    <input type="checkbox" [checked]="selection.allSelected" [indeterminate]="selection.indeterminate"
+                        (change)="toggleSelectAll()" />
+                </th>
+                <td cdk-cell *cdkCellDef="let record" class="checkbox-cell">
+                    <input type="checkbox" [checked]="record.selected" (change)="toggleSelection(record.id, $event)"
+                        (click)="$event.stopPropagation()" />
+                </td>
+            </ng-container>
+
+            <!-- Number Column -->
+            <ng-container cdkColumnDef="Number">
+                <th cdk-header-cell *cdkHeaderCellDef [class.sortable]="isSortable('Number')"
+                    (click)="sortBy('Number')">
+                    № Запис
+                    @if (sorting.field === 'Number') {
+                    <span class="sort-icon">{{ getSortIcon('Number') }}</span>
+                    }
+                </th>
+                <td cdk-cell *cdkCellDef="let record">{{ record.Number }}</td>
+            </ng-container>
+
+            <!-- Company Column -->
+            <ng-container cdkColumnDef="Ime_Firma">
+                <th cdk-header-cell *cdkHeaderCellDef [class.sortable]="isSortable('Ime_Firma')"
+                    (click)="sortBy('Ime_Firma')">
+                    Фирма
+                    @if (sorting.field === 'Ime_Firma') {
+                    <span class="sort-icon">{{ getSortIcon('Ime_Firma') }}</span>
+                    }
+                </th>
+                <td cdk-cell *cdkCellDef="let record" class="company-cell">
+                    <strong>{{ record.Ime_Firma }}</strong>
+                </td>
+            </ng-container>
+
+            <!-- Phone Column -->
+            <ng-container cdkColumnDef="Phone">
+                <th cdk-header-cell *cdkHeaderCellDef>Телефон</th>
+                <td cdk-cell *cdkCellDef="let record">{{ record.formattedPhone }}</td>
+            </ng-container>
+
+            <!-- Model Column -->
+            <ng-container cdkColumnDef="Model">
+                <th cdk-header-cell *cdkHeaderCellDef>Модел</th>
+                <td cdk-cell *cdkCellDef="let record">{{ record.Model }}</td>
+            </ng-container>
+
+            <!-- End Date Column -->
+            <ng-container cdkColumnDef="End_Data">
+                <th cdk-header-cell *cdkHeaderCellDef [class.sortable]="isSortable('End_Data')"
+                    (click)="sortBy('parsedEndDate')">
+                    Изтича на
+                    @if (sorting.field === 'parsedEndDate') {
+                    <span class="sort-icon">{{ getSortIcon('End_Data') }}</span>
+                    }
+                </th>
+                <td cdk-cell *cdkCellDef="let record">{{ formatDate(record.parsedEndDate) }}</td>
+            </ng-container>
+
+            <!-- Object Column -->
+            <ng-container cdkColumnDef="Ime_Obekt">
+                <th cdk-header-cell *cdkHeaderCellDef>Обект</th>
+                <td cdk-cell *cdkCellDef="let record">{{ record.Ime_Obekt || '-' }}</td>
+            </ng-container>
+
+            <!-- Header Row -->
+            <tr cdk-header-row *cdkHeaderRowDef="displayedColumns"></tr>
+
+            <!-- Data Rows -->
+            <tr cdk-row *cdkRowDef="let row; columns: displayedColumns;" [class.selected]="row.selected"
+                (click)="onRowClick(row)">
+            </tr>
         </table>
+        }
     </div>
 
     <!-- Pagination -->
@@ -140,18 +168,29 @@
             {{ Math.min((paginatedData.page + 1) * paginatedData.pageSize, paginatedData.totalRecords) }}
             от {{ paginatedData.totalRecords }}
         </div>
+
         <div class="pagination-controls">
-            <button class="btn btn-outline" [disabled]="!paginatedData.hasPreviousPage" (click)="previousPage()"
+            <button class="btn btn-outline btn-sm" [disabled]="!paginatedData.hasPreviousPage" (click)="firstPage()"
+                type="button" title="Първа страница">
+                ⏮
+            </button>
+            <button class="btn btn-outline btn-sm" [disabled]="!paginatedData.hasPreviousPage" (click)="previousPage()"
                 type="button">
                 ← Предишна
             </button>
             <span class="page-indicator">
                 Страница {{ paginatedData.page + 1 }} от {{ paginatedData.totalPages }}
             </span>
-            <button class="btn btn-outline" [disabled]="!paginatedData.hasNextPage" (click)="nextPage()" type="button">
+            <button class="btn btn-outline btn-sm" [disabled]="!paginatedData.hasNextPage" (click)="nextPage()"
+                type="button">
                 Следваща →
             </button>
+            <button class="btn btn-outline btn-sm" [disabled]="!paginatedData.hasNextPage" (click)="lastPage()"
+                type="button" title="Последна страница">
+                ⏭
+            </button>
         </div>
+
         <div class="page-size-selector">
             <label>Записи на страница:</label>
             <select class="form-control" [(ngModel)]="pageSize" (ngModelChange)="onPageSizeChange()">
