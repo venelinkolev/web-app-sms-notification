@@ -292,16 +292,23 @@ export class FileService {
 
     /**
  * Парсване на множество телефонни номера от string
- * Поддържа разделители: , / \ | space
+ * Поддържа разделители: , / \ |
+ * ВАЖНО: Интервалите ВЪТРЕ в телефонни номера се игнорират (напр. "0894 73 79 71")
  */
     private parsePhoneNumbers(phoneString: string): PhoneNumber[] {
-        // Split by multiple delimiters: comma, slash, backslash, pipe, space
-        const delimiter = /[,\/\\\|\s]+/;
-        const phoneStrings = phoneString
+        // СТЪПКА 1: Премахни ВСИЧКИ whitespace от целия string
+        // Това позволява телефони като "0894 73 79 71" да се третират като един номер
+        const cleanedString = phoneString.replace(/\s+/g, '');
+
+        // СТЪПКА 2: Split само по "истински" разделители (БЕЗ space!)
+        // Разделители: comma, slash, backslash, pipe
+        const delimiter = /[,\/\\\|]+/;
+        const phoneStrings = cleanedString
             .split(delimiter)
             .map(p => p.trim())
             .filter(p => p.length > 0);
 
+        // СТЪПКА 3: Форматирай и валидирай всеки телефон
         return phoneStrings.map((phone, index) => {
             const formatted = this.formatPhoneNumber(phone);
             const isValid = this.isValidPhone(phone);
