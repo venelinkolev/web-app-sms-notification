@@ -346,3 +346,123 @@
     }
   }
 }
+
+// Phone List Styles (Multiple Phones Support)
+.single-phone {
+  .invalid-phone {
+    color: var(--error-color);
+    text-decoration: line-through;
+  }
+}
+
+.phone-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  min-width: 150px;
+
+  .phone-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+    padding: 2px 0;
+
+    &.invalid {
+      opacity: 0.5;
+
+      span {
+        text-decoration: line-through;
+        color: var(--text-disabled);
+      }
+    }
+
+    input[type="checkbox"] {
+      cursor: pointer;
+      margin: 0;
+      flex-shrink: 0;
+
+      &:disabled {
+        cursor: not-allowed;
+      }
+    }
+
+    span {
+      &.selected {
+        font-weight: 600;
+        color: var(--primary-color);
+      }
+    }
+  }
+
+  .phone-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    padding-top: var(--spacing-xs);
+    border-top: 1px solid var(--border-color);
+  }
+
+  .btn-link {
+    color: var(--primary-color);
+    background: none;
+    border: none;
+    padding: 2px 0;
+    cursor: pointer;
+    font-size: var(--font-size-xs);
+    text-decoration: underline;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--primary-dark);
+    }
+  }
+}
+
+.phone-badge {
+  display: inline-block;
+  background: var(--info-color);
+  color: white;
+  padding: 2px 6px;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-xs);
+  font-weight: 600;
+  cursor: help;
+}
+
+.warning-badge {
+  color: var(--warning-color);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  margin-top: var(--spacing-xs);
+  padding: var(--spacing-xs);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1), transparent);
+  border-left: 2px solid var(--warning-color);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.invalid-badge {
+  color: var(--error-color);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-xs);
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .phone-list {
+    min-width: 120px;
+
+    .phone-item {
+      font-size: var(--font-size-xs);
+    }
+
+    .phone-actions {
+      flex-direction: column;
+      gap: var(--spacing-xs);
+    }
+  }
+}

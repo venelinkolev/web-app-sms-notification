@@ -2,11 +2,32 @@
  * Main client record structure for JSON data import
  * Corresponds to the contract expiry notification system requirements
  */
+
+/**
+ * Individual phone number with selection state for SMS sending
+ */
+export interface PhoneNumber {
+    /** Original phone format from JSON */
+    original: string;
+
+    /** Formatted international phone (+359...) */
+    formatted: string;
+
+    /** Whether this phone is selected for SMS sending */
+    selected: boolean;
+
+    /** Whether this phone is valid */
+    isValid: boolean;
+
+    /** Unique identifier for this phone in the record */
+    id: string;
+}
+
 export interface ClientRecord {
     /** Client record number/identifier */
     Number: string;
 
-    /** Contract end date in format dd/mm/yy HH:mm:ss */
+    /** Contract end date in format mm/dd/yy HH:mm:ss (American format) */
     End_Data: string;
 
     /** Equipment model */
@@ -41,8 +62,20 @@ export interface ParsedClientRecord extends ClientRecord {
     /** Parsed end date as Date object */
     parsedEndDate?: Date;
 
-    /** Formatted phone number in international format */
+    /** @deprecated Use phoneNumbers array instead - kept for backward compatibility */
     formattedPhone?: string;
+
+    /** Array of parsed phone numbers (supports multiple phones per record) */
+    phoneNumbers: PhoneNumber[];
+
+    /** Whether this record has multiple phone numbers */
+    hasMultiplePhones: boolean;
+
+    /** Count of selected phones for SMS sending */
+    selectedPhoneCount: number;
+
+    /** Whether user must select phone before SMS (true if multiple phones and none selected) */
+    requiresPhoneSelection: boolean;
 
     /** Record validation status */
     isValid: boolean;
@@ -131,7 +164,8 @@ export enum ValidationErrorCode {
     INVALID_PHONE = 'INVALID_PHONE',
     TOO_LONG = 'TOO_LONG',
     TOO_SHORT = 'TOO_SHORT',
-    DUPLICATE = 'DUPLICATE'
+    DUPLICATE = 'DUPLICATE',
+    PHONE_SELECTION_REQUIRED = 'PHONE_SELECTION_REQUIRED',
 }
 
 /**

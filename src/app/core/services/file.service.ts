@@ -8,7 +8,8 @@ import {
     ClientDataImport,
     ValidationResult,
     ValidationError,
-    ValidationErrorCode
+    ValidationErrorCode,
+    PhoneNumber
 } from '../models';
 
 @Injectable({
@@ -131,13 +132,27 @@ export class FileService {
 
                     seenNumbers.add(recordNumber);
 
+                    // Parse phone numbers (може да са multiple)
+                    const phoneNumbers = this.parsePhoneNumbers(record.Phone);
+                    const hasMultiplePhones = phoneNumbers.length > 1;
+                    const validPhones = phoneNumbers.filter(p => p.isValid);
+
                     // Създаване на ParsedClientRecord
                     const parsedRecord: ParsedClientRecord = {
                         ...record,
                         id: `client-${Date.now()}-${index}`,
                         parsedEndDate: this.parseEndDate(record.End_Data),
-                        formattedPhone: this.formatPhoneNumber(record.Phone),
-                        isValid: true,
+
+                        // Backward compatibility (deprecated)
+                        formattedPhone: phoneNumbers[0]?.formatted,
+
+                        // NEW: Multiple phones support
+                        phoneNumbers: phoneNumbers,
+                        hasMultiplePhones: hasMultiplePhones,
+                        selectedPhoneCount: phoneNumbers.filter(p => p.selected).length,
+                        requiresPhoneSelection: hasMultiplePhones && phoneNumbers.filter(p => p.selected).length === 0,
+
+                        isValid: validPhones.length > 0, // Valid ако има ПОНЕ 1 валиден телефон
                         validationErrors: [],
                         selected: false
                     };
@@ -211,13 +226,18 @@ export class FileService {
         }
 
         // Валидация на телефон
-        if (record.Phone && !this.isValidPhone(record.Phone)) {
-            errors.push({
-                field: 'Phone',
-                message: 'Невалиден формат на телефонен номер',
-                code: ValidationErrorCode.INVALID_PHONE,
-                value: record.Phone
-            });
+        if (record.Phone) {
+            const phones = this.parsePhoneNumbers(record.Phone);
+            const validPhones = phones.filter(p => p.isValid);
+
+            if (validPhones.length === 0) {
+                errors.push({
+                    field: 'Phone',
+                    message: `Няма валидни телефонни номера (проверени ${phones.length} номера)`,
+                    code: ValidationErrorCode.INVALID_PHONE,
+                    value: record.Phone
+                });
+            }
         }
 
         return {
@@ -232,12 +252,12 @@ export class FileService {
      */
     private parseEndDate(dateString: string): Date | undefined {
         try {
-            // Формат: dd/mm/yy HH:mm:ss
+            // Формат: mm/dd/yy HH:mm:ss (американски формат)
             const parts = dateString.split(' ');
             if (parts.length !== 2) return undefined;
 
             const [datePart, timePart] = parts;
-            const [day, month, year] = datePart.split('/').map(Number);
+            const [month, day, year] = datePart.split('/').map(Number);
             const [hours, minutes, seconds] = timePart.split(':').map(Number);
 
             // Превръщане на 2-цифрена година в 4-цифрена
@@ -268,6 +288,32 @@ export class FileService {
 
         // В противен случай, добавяме +359
         return '+359' + digits;
+    }
+
+    /**
+ * Парсване на множество телефонни номера от string
+ * Поддържа разделители: , / \ | space
+ */
+    private parsePhoneNumbers(phoneString: string): PhoneNumber[] {
+        // Split by multiple delimiters: comma, slash, backslash, pipe, space
+        const delimiter = /[,\/\\\|\s]+/;
+        const phoneStrings = phoneString
+            .split(delimiter)
+            .map(p => p.trim())
+            .filter(p => p.length > 0);
+
+        return phoneStrings.map((phone, index) => {
+            const formatted = this.formatPhoneNumber(phone);
+            const isValid = this.isValidPhone(phone);
+
+            return {
+                original: phone,
+                formatted: formatted,
+                selected: phoneStrings.length === 1, // Auto-select if only one phone
+                isValid: isValid,
+                id: `phone-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 9)}`
+            };
+        });
     }
 
     /**

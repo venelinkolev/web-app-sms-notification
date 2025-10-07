@@ -119,10 +119,63 @@
                 </td>
             </ng-container>
 
-            <!-- Phone Column -->
+            <!-- Phone Column - ОБНОВЕНА ВЕРСИЯ с multiple phones support -->
             <ng-container cdkColumnDef="Phone">
-                <th cdk-header-cell *cdkHeaderCellDef>Телефон</th>
-                <td cdk-cell *cdkCellDef="let record">{{ record.formattedPhone }}</td>
+                <th cdk-header-cell *cdkHeaderCellDef>
+                    Телефон
+                    @if (phoneStats$ | async; as stats) {
+                    @if (stats.totalRecordsWithMultiplePhones > 0) {
+                    <span class="phone-badge" title="Записи с множество телефони">
+                        📱📱 {{ stats.totalRecordsWithMultiplePhones }}
+                    </span>
+                    }
+                    }
+                </th>
+                <td cdk-cell *cdkCellDef="let record">
+                    @if (!record.hasMultiplePhones) {
+                    <!-- Single phone - просто показваме -->
+                    <div class="single-phone">
+                        @if (record.phoneNumbers[0]?.isValid) {
+                        <span>{{ record.phoneNumbers[0]?.formatted }}</span>
+                        } @else {
+                        <span class="invalid-phone">
+                            {{ record.phoneNumbers[0]?.original }}
+                            <span class="invalid-badge" title="Невалиден телефон">❌</span>
+                        </span>
+                        }
+                    </div>
+                    } @else {
+                    <!-- Multiple phones - показваме с checkboxes -->
+                    <div class="phone-list">
+                        @for (phone of record.phoneNumbers; track phone.id) {
+                        <div class="phone-item" [class.invalid]="!phone.isValid">
+                            <input type="checkbox" [checked]="phone.selected" [disabled]="!phone.isValid"
+                                (change)="onPhoneToggle(record.id, phone.id, $event)" (click)="$event.stopPropagation()"
+                                [title]="phone.isValid ? 'Изберете за SMS' : 'Невалиден телефон'" />
+                            <span [class.selected]="phone.selected">{{ phone.formatted }}</span>
+                            @if (!phone.isValid) {
+                            <span class="invalid-badge" title="Невалиден формат">❌</span>
+                            }
+                        </div>
+                        }
+                        <div class="phone-actions">
+                            <button class="btn-link btn-sm" (click)="selectAllPhones(record.id, $event)" type="button"
+                                title="Избери всички валидни телефони">
+                                ✅ Избери всички
+                            </button>
+                            <button class="btn-link btn-sm" (click)="deselectAllPhones(record.id, $event)" type="button"
+                                title="Премахни избора">
+                                ✕ Изчисти
+                            </button>
+                        </div>
+                        @if (record.selected && record.requiresPhoneSelection) {
+                        <div class="warning-badge" title="Изберете поне един телефон за SMS">
+                            ⚠️ Изберете телефон за SMS
+                        </div>
+                        }
+                    </div>
+                    }
+                </td>
             </ng-container>
 
             <!-- Model Column -->

@@ -424,4 +424,130 @@ export class DataService {
             }))
         );
     }
+
+    /**
+ * Toggle selection на конкретен телефон за конкретен запис
+ */
+    togglePhoneSelection(recordId: string, phoneId: string): void {
+        const data = this.rawData$.value;
+
+        const updatedData = data.map(record => {
+            if (record.id === recordId) {
+                const updatedPhones = record.phoneNumbers.map(phone =>
+                    phone.id === phoneId
+                        ? { ...phone, selected: !phone.selected }
+                        : phone
+                );
+
+                const selectedCount = updatedPhones.filter(p => p.selected).length;
+
+                return {
+                    ...record,
+                    phoneNumbers: updatedPhones,
+                    selectedPhoneCount: selectedCount,
+                    requiresPhoneSelection: record.hasMultiplePhones && selectedCount === 0
+                };
+            }
+            return record;
+        });
+
+        this.rawData$.next(updatedData);
+    }
+
+    /**
+ * Select all phones за конкретен запис
+ */
+    selectAllPhonesForRecord(recordId: string): void {
+        const data = this.rawData$.value;
+
+        const updatedData = data.map(record => {
+            if (record.id === recordId) {
+                const updatedPhones = record.phoneNumbers.map(phone => ({
+                    ...phone,
+                    selected: phone.isValid // Select само валидните
+                }));
+
+                return {
+                    ...record,
+                    phoneNumbers: updatedPhones,
+                    selectedPhoneCount: updatedPhones.filter(p => p.selected).length,
+                    requiresPhoneSelection: false
+                };
+            }
+            return record;
+        });
+
+        this.rawData$.next(updatedData);
+    }
+
+    /**
+ * Deselect all phones за конкретен запис
+ */
+    deselectAllPhonesForRecord(recordId: string): void {
+        const data = this.rawData$.value;
+
+        const updatedData = data.map(record => {
+            if (record.id === recordId) {
+                const updatedPhones = record.phoneNumbers.map(phone => ({
+                    ...phone,
+                    selected: false
+                }));
+
+                return {
+                    ...record,
+                    phoneNumbers: updatedPhones,
+                    selectedPhoneCount: 0,
+                    requiresPhoneSelection: record.hasMultiplePhones
+                };
+            }
+            return record;
+        });
+
+        this.rawData$.next(updatedData);
+    }
+
+    /**
+ * Валидира дали всички multi-phone записи имат избран поне 1 телефон
+ * Връща true ако всичко е OK, false + error messages ако има проблем
+ */
+    validatePhoneSelections(): { isValid: boolean; errors: string[] } {
+        const selectedRecords = this.getSelectedRecords();
+        const errors: string[] = [];
+
+        selectedRecords.forEach(record => {
+            if (record.requiresPhoneSelection) {
+                errors.push(
+                    `Запис "${record.Number}" (${record.Ime_Firma}) има ${record.phoneNumbers.length} телефона - моля изберете поне един!`
+                );
+            }
+        });
+
+        return {
+            isValid: errors.length === 0,
+            errors: errors
+        };
+    }
+
+    /**
+ * Observable за статистики на phone selection
+ */
+    getPhoneSelectionStats(): Observable<{
+        totalRecordsWithMultiplePhones: number;
+        recordsRequiringSelection: number;
+        totalSelectedPhones: number;
+    }> {
+        return this.rawData$.pipe(
+            map(data => {
+                const multiPhoneRecords = data.filter(r => r.hasMultiplePhones);
+                const requiresSelection = data.filter(r => r.selected && r.requiresPhoneSelection);
+                const totalSelected = data.reduce((sum, r) => sum + r.selectedPhoneCount, 0);
+
+                return {
+                    totalRecordsWithMultiplePhones: multiPhoneRecords.length,
+                    recordsRequiringSelection: requiresSelection.length,
+                    totalSelectedPhones: totalSelected
+                };
+            })
+        );
+    }
 }

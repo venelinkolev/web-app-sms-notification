@@ -13,6 +13,7 @@ import {
     ClientSelection,
     ClientSort
 } from '../../core/models';
+import { NotificationService } from '../../core/services';
 
 @Component({
     selector: 'app-client-list',
@@ -80,7 +81,10 @@ export class ClientListComponent implements OnInit, OnDestroy {
 
     private destroy$ = new Subject<void>();
 
-    constructor(private dataService: DataService) {
+    // Phone selection statistics
+    phoneStats$ = this.dataService.getPhoneSelectionStats();
+
+    constructor(private dataService: DataService, private notificationService: NotificationService) {
         this.dataSource = new ClientDataSource(this.dataService);
     }
 
@@ -273,12 +277,33 @@ export class ClientListComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Send SMS (placeholder)
-     */
+   * Send SMS (placeholder)
+   */
     onSendSMS(): void {
+        // Валидация на phone selections
+        const validation = this.dataService.validatePhoneSelections();
+
+        if (!validation.isValid) {
+            // Show error notification with all errors
+            const errorMessage = validation.errors.join('\n\n');
+
+            this.notificationService.error(
+                '⚠️ Изберете телефони за SMS',
+                errorMessage
+            );
+
+            // Log errors за debugging
+            console.error('Phone selection validation errors:', validation.errors);
+            return;
+        }
+
+        // Proceed with SMS sending...
         const selected = this.dataService.getSelectedRecords();
         console.log('Sending SMS to:', selected);
-        alert(`Готово за SMS изпращане към ${selected.length} клиента! (Функционалност в следваща под-задача)`);
+
+        // Show success notification
+        const totalPhones = selected.reduce((sum, r) => sum + r.selectedPhoneCount, 0);
+        alert(`Готово за SMS изпращане към ${selected.length} клиента (${totalPhones} телефона)! (Функционалност в следваща под-задача)`);
     }
 
     /**
@@ -298,6 +323,55 @@ export class ClientListComponent implements OnInit, OnDestroy {
      */
     trackByRecordId(index: number, record: ParsedClientRecord): string {
         return record.id;
+    }
+
+    /**
+ * Toggle phone selection
+ */
+    onPhoneToggle(recordId: string, phoneId: string, event: Event): void {
+        event.stopPropagation();
+        this.dataService.togglePhoneSelection(recordId, phoneId);
+    }
+
+    /**
+ * Select all phones for record
+ */
+    selectAllPhones(recordId: string, event: Event): void {
+        event.stopPropagation();
+        this.dataService.selectAllPhonesForRecord(recordId);
+    }
+
+    /**
+ * Deselect all phones for record
+ */
+    deselectAllPhones(recordId: string, event: Event): void {
+        event.stopPropagation();
+        this.dataService.deselectAllPhonesForRecord(recordId);
+    }
+
+    /**
+ * Log phone selection details (за debugging)
+ */
+    logPhoneSelectionDetails(): void {
+        const selected = this.dataService.getSelectedRecords();
+
+        console.group('📱 Phone Selection Details');
+        console.log('Total selected records:', selected.length);
+
+        selected.forEach(record => {
+            console.group(`Record: ${record.Number} - ${record.Ime_Firma}`);
+            console.log('Has multiple phones:', record.hasMultiplePhones);
+            console.log('Selected phone count:', record.selectedPhoneCount);
+            console.log('Requires selection:', record.requiresPhoneSelection);
+
+            record.phoneNumbers.forEach(phone => {
+                console.log(`  📞 ${phone.formatted} - Selected: ${phone.selected}, Valid: ${phone.isValid}`);
+            });
+
+            console.groupEnd();
+        });
+
+        console.groupEnd();
     }
 }
 
