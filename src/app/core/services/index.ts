@@ -13,6 +13,9 @@ export { NotificationService } from './notification.service';
 // SMS service for sending messages
 export { SMSService } from './sms.service';
 
+// SMS Template service for managing templates
+export { SMSTemplateService } from './sms-template.service';
+
 // Re-export environment interfaces
 export type {
     Environment,
