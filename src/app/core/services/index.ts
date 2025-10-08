@@ -10,6 +10,9 @@ export { DataService } from './data.service';
 // Notification service
 export { NotificationService } from './notification.service';
 
+// SMS service for sending messages
+export { SMSService } from './sms.service';
+
 // Re-export environment interfaces
 export type {
     Environment,

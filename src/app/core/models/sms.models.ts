@@ -294,3 +294,133 @@ export const SMS_ERROR_CODES = {
  * SMS API error codes type
  */
 export type SMSErrorCode = keyof typeof SMS_ERROR_CODES;
+
+/**
+ * SMS Service Request Parameters
+ */
+
+/**
+ * Parameters for sending a single SMS
+ */
+export interface SendSMSParams {
+    /** Recipient phone number(s) in international format */
+    to: string | string[];
+
+    /** SMS message content */
+    message: string;
+
+    /** Sender name (must be verified, defaults to "Test") */
+    from?: string;
+
+    /** Priority delivery flag (50% premium cost) */
+    priority?: boolean;
+
+    /** Scheduled delivery date (Unix timestamp) */
+    scheduledDate?: Date;
+
+    /** Custom message identifier (max 32 characters) */
+    customId?: string;
+
+    /** Character encoding flag */
+    hasSpecialChars?: boolean;
+
+    /** Template identifier */
+    templateId?: string;
+
+    /** Template parameters */
+    templateParams?: Record<string, string>;
+}
+
+/**
+ * Options for bulk SMS operations
+ */
+export interface BulkSMSOptions {
+    /** Sender name */
+    from?: string;
+
+    /** Priority delivery flag */
+    priority?: boolean;
+
+    /** Scheduled delivery date */
+    scheduledDate?: Date;
+
+    /** Custom batch identifier */
+    batchId?: string;
+
+    /** Encoding type */
+    encoding?: SMSEncoding;
+}
+
+/**
+ * Bulk SMS sending response
+ */
+export interface BulkSMSResponse extends SMSResponse {
+    /** Invalid phone numbers */
+    invalid_numbers?: InvalidNumber[];
+
+    /** Total cost in credits */
+    total_cost: number;
+
+    /** Successful sends count */
+    successful_count: number;
+
+    /** Failed sends count */
+    failed_count: number;
+}
+
+/**
+ * SMS sending result with client context
+ */
+export interface SMSSendResult {
+    /** Client record ID */
+    clientId: string;
+
+    /** Phone number used */
+    phoneNumber: string;
+
+    /** SMS message ID from API */
+    messageId?: string;
+
+    /** Send status */
+    status: 'success' | 'failed';
+
+    /** Error message if failed */
+    error?: string;
+
+    /** Error code if failed */
+    errorCode?: number;
+
+    /** Cost in credits */
+    cost?: number;
+
+    /** Timestamp */
+    timestamp: Date;
+}
+
+/**
+ * Batch SMS operation complete result
+ */
+export interface BatchSMSCompleteResult {
+    /** Batch identifier */
+    batchId: string;
+
+    /** Individual send results */
+    results: SMSSendResult[];
+
+    /** Statistics */
+    stats: {
+        total: number;
+        successful: number;
+        failed: number;
+        totalCost: number;
+    };
+
+    /** Operation start time */
+    startTime: Date;
+
+    /** Operation end time */
+    endTime: Date;
+
+    /** Duration in milliseconds */
+    duration: number;
+}

@@ -1,4 +1,3 @@
-// src/app/app.component.ts
 import { Component, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -7,6 +6,7 @@ import { CommonModule } from '@angular/common';
 import { EnvironmentService } from './core/services/environment.service';
 import { NotificationService } from './core/services/notification.service';
 import { DataService } from './core/services/data.service';
+import { SMSService } from './core/services/sms.service';
 
 // Components
 import { FileUploadComponent } from './features/file-upload/file-upload.component';
@@ -61,12 +61,14 @@ export class AppComponent implements OnInit {
   constructor(
     private environmentService: EnvironmentService,
     private notificationService: NotificationService,
-    private dataService: DataService
+    private dataService: DataService,
+    private smsService: SMSService,
   ) { }
 
   ngOnInit(): void {
     this.loadEnvironmentData();
     this.showWelcomeMessage();
+    this.testSMSService();
   }
 
   /**
@@ -86,6 +88,32 @@ export class AppComponent implements OnInit {
       'Готово за тестване на JSON файлова обработка 🚀',
       4000
     );
+  }
+
+  // Test SMS Service
+  private testSMSService(): void {
+    const status = this.smsService.getServiceStatus();
+
+    console.group('📱 SMS Service Status');
+    console.log('Configured:', status.configured ? '✅ YES' : '❌ NO');
+    console.log('Base URL:', status.baseUrl);
+    console.log('Sender:', status.sender);
+    console.log('Test Mode:', status.testMode ? '✅ ON' : '❌ OFF');
+    console.groupEnd();
+
+    if (!status.configured) {
+      this.notificationService.warning(
+        '⚠️ SMS API Token',
+        'Token не е конфигуриран в environment.local.ts',
+        7000
+      );
+    } else {
+      this.notificationService.success(
+        '✅ SMS Service Ready',
+        'SMS API е готов за използване!',
+        3000
+      );
+    }
   }
 
   /**
@@ -212,5 +240,38 @@ export class AppComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit'
     }).format(date);
+  }
+
+  /**
+ * Test SMS sending
+ */
+  testSendSMS(): void {
+    const testPhone = this.environmentService.getSMSApiConfig().testPhoneNumber || '+359895552160';
+
+    this.notificationService.info(
+      'SMS Test',
+      `Изпращам тестово SMS до ${testPhone}...`,
+      3000
+    );
+
+    this.smsService.sendSMS({
+      to: testPhone,
+      message: 'Тестово съобщение от SMS Notification App! 🚀',
+      from: 'Test'
+    }).subscribe({
+      next: (response) => {
+        console.log('✅ SMS Response:', response);
+
+        this.notificationService.success(
+          'SMS изпратен успешно!',
+          `Message ID: ${response.list[0].id}\nStatus: ${response.list[0].status}`,
+          7000
+        );
+      },
+      error: (error) => {
+        console.error('❌ SMS Error:', error);
+        // Notification е вече показан автоматично от service
+      }
+    });
   }
 }
