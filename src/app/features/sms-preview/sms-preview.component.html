@@ -1,0 +1,195 @@
+<div class="sms-preview-container">
+
+    <!-- Header -->
+    <div class="preview-header">
+        <h2>📝 SMS Preview & Send</h2>
+        <p class="subtitle">
+            Преглед и изпращане на персонализирани SMS съобщения
+        </p>
+    </div>
+
+    <!-- No selection message -->
+    @if (selectedRecords.length === 0) {
+    <div class="card empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">Няма избрани клиенти</div>
+        <p>Моля изберете клиенти от таблицата за да генерирате SMS preview</p>
+    </div>
+    } @else {
+
+    <!-- Template Editor Section -->
+    <div class="template-section card">
+        <div class="section-header">
+            <h3>📋 SMS Шаблон</h3>
+            <button class="btn btn-sm btn-outline" (click)="showPlaceholderHelp()" type="button"
+                title="Покажи налични placeholders">
+                ❓ Placeholders
+            </button>
+        </div>
+
+        @if (!isEditingTemplate) {
+        <!-- View mode -->
+        <div class="template-view">
+            <div class="template-content">{{ currentTemplate?.content }}</div>
+            <button class="btn btn-outline" (click)="toggleTemplateEdit()" type="button">
+                ✏️ Редактирай шаблон
+            </button>
+        </div>
+        } @else {
+        <!-- Edit mode -->
+        <div class="template-edit">
+            <textarea class="form-control template-textarea" rows="6" [(ngModel)]="editedTemplateContent"
+                (ngModelChange)="onTemplateContentChange()" placeholder="Въведете SMS шаблон с placeholders...">
+            </textarea>
+
+            <div class="template-actions">
+                <button class="btn btn-primary" (click)="saveTemplateChanges()" type="button">
+                    ✅ Запази промените
+                </button>
+                <button class="btn btn-outline" (click)="cancelTemplateEdit()" type="button">
+                    ✕ Отказ
+                </button>
+            </div>
+        </div>
+        }
+
+        <!-- Template Character Count -->
+        <div class="char-count-section">
+            <div class="char-count-header">
+                <span class="char-count-label">Character Count:</span>
+                <span class="char-count-value"
+                    [class]="getCharCountColor(templateCharCount.count, templateCharCount.encoding)">
+                    {{ templateCharCount.count }} chars
+                </span>
+                <span class="encoding-badge">
+                    {{ getEncodingIcon(templateCharCount.encoding) }}
+                    {{ getEncodingText(templateCharCount.encoding) }}
+                </span>
+            </div>
+
+            <div class="char-progress-bar">
+                <div class="char-progress-fill"
+                    [class]="getCharCountColor(templateCharCount.count, templateCharCount.encoding)"
+                    [style.width.%]="getCharProgressPercentage(templateCharCount.count, templateCharCount.encoding)">
+                </div>
+            </div>
+
+            <div class="char-count-details">
+                <span>
+                    {{ templateCharCount.estimatedParts }}
+                    {{ templateCharCount.estimatedParts === 1 ? 'част' : 'части' }}
+                </span>
+                <span>~{{ templateCharCount.estimatedCost.toFixed(2) }} credits per SMS</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Section -->
+    <div class="preview-section card">
+        <div class="section-header">
+            <h3>👁️ Preview на персонализирани SMS</h3>
+            <span class="preview-count">
+                Показани {{ previewSMS.length }} от {{ personalizedSMS.length }}
+            </span>
+        </div>
+
+        @if (isGenerating) {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Генериране на персонализирани SMS съобщения...</p>
+        </div>
+        } @else {
+
+        <div class="preview-list">
+            @for (sms of previewSMS; track sms.clientId) {
+            <div class="sms-card" [class.invalid]="!sms.isValid">
+                <div class="sms-header">
+                    <div class="client-info">
+                        <span class="client-icon">📱</span>
+                        <div class="client-details">
+                            <strong>{{ getClientName(sms.clientId) }}</strong>
+                            <span class="phone-number">{{ sms.phoneNumber }}</span>
+                        </div>
+                    </div>
+                    <div class="sms-encoding">
+                        {{ getEncodingIcon(sms.encoding) }}
+                        {{ sms.encoding === 'unicode' ? 'Unicode' : 'Standard' }}
+                    </div>
+                </div>
+
+                <div class="sms-content">
+                    {{ sms.content }}
+                </div>
+
+                <div class="sms-footer">
+                    <span class="char-count" [class]="getCharCountColor(sms.characterCount, sms.encoding)">
+                        {{ sms.characterCount }} chars
+                    </span>
+                    <span class="parts-count">
+                        {{ sms.estimatedParts }}
+                        {{ sms.estimatedParts === 1 ? 'част' : 'части' }}
+                    </span>
+                    <span class="cost-estimate">
+                        {{ sms.estimatedCost.toFixed(2) }} credits
+                    </span>
+                </div>
+
+                @if (!sms.isValid && sms.validationErrors) {
+                <div class="sms-errors">
+                    @for (error of sms.validationErrors; track error) {
+                    <div class="error-message">❌ {{ error }}</div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+
+        @if (hasMoreSMS) {
+        <div class="more-sms-notice">
+            И още {{ personalizedSMS.length - previewLimit }} SMS съобщения...
+        </div>
+        }
+        }
+    </div>
+
+    <!-- Statistics Section -->
+    <div class="statistics-section card">
+        <h3>📊 Статистики</h3>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">{{ stats.totalRecords }}</div>
+                <div class="stat-label">Избрани клиенти</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ stats.totalSMS }}</div>
+                <div class="stat-label">Общо SMS</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ stats.averageChars }}</div>
+                <div class="stat-label">Средно chars</div>
+            </div>
+            <div class="stat-item success">
+                <div class="stat-value">{{ stats.totalCost.toFixed(2) }}</div>
+                <div class="stat-label">Общ разход (credits)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Button -->
+    <div class="send-section">
+        <button class="btn btn-primary btn-large" [disabled]="isSending || personalizedSMS.length === 0"
+            (click)="sendSMS()" type="button">
+            @if (isSending) {
+            <span class="spinner-small"></span> Изпращане...
+            } @else {
+            📨 Изпрати SMS до {{ stats.totalRecords }} клиента
+            }
+        </button>
+        <p class="send-note">
+            Общ разход: <strong>{{ stats.totalCost.toFixed(2) }} credits</strong>
+        </p>
+    </div>
+
+    }
+</div>

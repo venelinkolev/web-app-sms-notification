@@ -1,11 +1,12 @@
+<!-- src/app/app.component.html -->
 <div class="app-container">
     <!-- Header -->
     <header class="app-header">
         <div class="container">
             <h1 class="app-title">{{ title }}</h1>
             <p class="app-subtitle">
-                <span class="phase-badge">Phase 2 - Под-задача 2</span>
-                Data Service and Client List - Testing
+                <span class="phase-badge">Phase 4 - Sub-task 4.3 ✅</span>
+                SMS Preview Component - Testing
             </p>
             <div class="mode-indicator">
                 <span class="mode-badge" [class.production]="isProduction" [class.development]="!isProduction">
@@ -30,43 +31,61 @@
             <section class="client-list-section">
                 <app-client-list></app-client-list>
             </section>
+
+            <!-- SMS Preview Section -->
+            <section class="sms-preview-section">
+                <app-sms-preview></app-sms-preview>
+            </section>
             }
 
             <!-- Testing Instructions -->
             @if (!hasData) {
             <section class="testing-instructions card">
-                <h3 class="text-primary">🧪 Инструкции за тестване</h3>
+                <h3 class="text-primary">🧪 Инструкции за тестване на SMS Preview</h3>
                 <div class="test-steps">
                     <div class="test-step">
-                        <strong>1. Тест drag & drop:</strong> Прехвърлете JSON файл в upload зоната
+                        <strong>1. Upload JSON:</strong> Качете JSON файл с клиентски данни
                     </div>
                     <div class="test-step">
-                        <strong>2. Тест file picker:</strong> Щракнете в зоната за избор на файл
+                        <strong>2. Select clients:</strong> Изберете 3-5 клиента от таблицата
                     </div>
                     <div class="test-step">
-                        <strong>3. Тест валидация:</strong> Опитайте с невалиден файл (не JSON)
+                        <strong>3. Check preview:</strong> Прегледайте автоматично генерираните SMS съобщения
                     </div>
                     <div class="test-step">
-                        <strong>4. Тест голям файл:</strong> Опитайте с файл над {{ maxFileSizeFormatted }}
+                        <strong>4. Character count:</strong> Проверете character counter (зелено/жълто/червено)
                     </div>
                     <div class="test-step">
-                        <strong>5. Тест filtering:</strong> Използвайте search и filters в таблицата
+                        <strong>5. Edit template:</strong> Редактирайте шаблона и вижте промените
                     </div>
                     <div class="test-step">
-                        <strong>6. Тест sorting:</strong> Кликнете на column headers за сортиране
+                        <strong>6. Cost estimation:</strong> Проверете общата цена (credits)
                     </div>
                     <div class="test-step">
-                        <strong>7. Тест selection:</strong> Изберете записи с checkboxes
+                        <strong>7. Phone validation:</strong> Тествайте phone selection validation
                     </div>
                     <div class="test-step">
-                        <strong>8. Тест pagination:</strong> Навигирайте между страниците
+                        <strong>8. Send button:</strong> Кликнете "Изпрати SMS" (demo mode)
                     </div>
                 </div>
 
                 <!-- Sample JSON Structure -->
                 <div class="json-sample">
-                    <h4>📄 Примерна JSON структура:</h4>
+                    <h4>📄 Примерна JSON структура с множество телефони:</h4>
                     <pre><code>{{ sampleJsonStructure }}</code></pre>
+                </div>
+
+                <div class="info-box">
+                    <h4>✨ Нови функционалности в Sub-task 4.3:</h4>
+                    <ul>
+                        <li>📝 <strong>SMS Preview Component</strong> - Персонализиран преглед на съобщения</li>
+                        <li>📊 <strong>Character Counter</strong> - Визуална индикация (70/160 chars)</li>
+                        <li>✏️ <strong>Template Editor</strong> - Inline редактиране на шаблон</li>
+                        <li>💰 <strong>Cost Estimation</strong> - Автоматично изчисляване на разходи</li>
+                        <li>✅ <strong>Phone Validation</strong> - Проверка преди изпращане</li>
+                        <li>🔤 <strong>Encoding Detection</strong> - Unicode/Standard автоматично</li>
+                        <li>📱 <strong>Multiple Phones</strong> - Поддръжка за повече от 1 телефон</li>
+                    </ul>
                 </div>
             </section>
             }
