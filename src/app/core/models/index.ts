@@ -9,3 +9,6 @@ export * from './app-state.models';
 
 // Utility types
 export * from './utility.types';
+
+// Error handling models
+export * from './error.models';

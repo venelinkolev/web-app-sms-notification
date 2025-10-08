@@ -18,6 +18,8 @@ import {
     BatchSMSCompleteResult,
     InvalidNumber
 } from '../models';
+import { ErrorLoggerService } from './error-logger.service';
+import { ErrorContext, ErrorSeverity } from '../models/error.models';
 
 /**
  * SMS Service for SMSApi.bg integration
@@ -34,10 +36,12 @@ export class SMSService {
     private readonly maxRetries: number;
     private readonly retryDelay: number;
 
+
     constructor(
         private http: HttpClient,
         private environmentService: EnvironmentService,
-        private notificationService: NotificationService
+        private notificationService: NotificationService,
+        private errorLogger: ErrorLoggerService
     ) {
         // Load configuration from environment
         const smsConfig = this.environmentService.getSMSApiConfig();
@@ -103,6 +107,17 @@ export class SMSService {
                 if (this.environmentService.isConsoleLoggingEnabled()) {
                     console.log('✅ SMS sent successfully:', response);
                 }
+
+                // Log successful sends (optional - LOW severity)
+                this.errorLogger.logError(
+                    `SMS sent successfully: ${response.count} messages`,
+                    ErrorContext.SMS_API,
+                    ErrorSeverity.LOW,
+                    {
+                        messageCount: response.count,
+                        recipients: params.to
+                    }
+                );
             })
         );
     }
@@ -301,7 +316,14 @@ export class SMSService {
             errorMessage = error.message;
         }
 
-        // Log error
+        // ✅ NEW: Log error with ErrorLoggerService
+        this.errorLogger.logSMSError(error, errorCode, {
+            message: errorMessage,
+            httpStatus: error.status,
+            url: error.url
+        });
+
+        // Log error (existing)
         if (this.environmentService.isConsoleLoggingEnabled()) {
             console.error('❌ SMS API Error:', {
                 code: errorCode,
