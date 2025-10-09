@@ -28,3 +28,6 @@ environment.local.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# IDE specific files
+proxy.conf.json

@@ -85,8 +85,9 @@ export class SMSService {
         });
 
         const url = `${this.baseUrl}sms.do`;
+        const corsUrl = '/api/sms.do'; // CORS proxy endpoint   
 
-        return this.http.post<SMSResponse>(url, body, this.getHttpOptions()).pipe(
+        return this.http.post<SMSResponse>(corsUrl, body, this.getHttpOptions()).pipe(
             // Retry logic for temporary errors
             retryWhen(errors =>
                 errors.pipe(

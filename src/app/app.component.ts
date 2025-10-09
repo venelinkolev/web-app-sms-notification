@@ -72,6 +72,8 @@ export class AppComponent implements OnInit {
     this.loadEnvironmentData();
     this.showWelcomeMessage();
     this.testSMSService();
+    // Test sending SMS (uncomment to test)
+    // this.testSendSMS();
   }
 
   /**
@@ -197,7 +199,7 @@ export class AppComponent implements OnInit {
 
     this.smsService.sendSMS({
       to: testPhone,
-      message: 'Тестово съобщение от SMS Notification App! 🚀',
+      message: 'Тестово съобщение от SMS Notification App!',
       from: 'Test'
     }).subscribe({
       next: (response) => {
