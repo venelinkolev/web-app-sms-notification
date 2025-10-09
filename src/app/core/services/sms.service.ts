@@ -24,6 +24,9 @@ import {
 } from '../models';
 import { ErrorLoggerService } from './error-logger.service';
 import { ErrorContext, ErrorSeverity } from '../models/error.models';
+import { CircuitBreakerService } from './circuit-breaker.service';
+import type { RetryStrategyConfig } from '../../../environments/environment.interface';
+
 
 /**
  * SMS Service for SMSApi.bg integration
@@ -45,7 +48,8 @@ export class SMSService {
         private http: HttpClient,
         private environmentService: EnvironmentService,
         private notificationService: NotificationService,
-        private errorLogger: ErrorLoggerService
+        private errorLogger: ErrorLoggerService,
+        private circuitBreaker: CircuitBreakerService,
     ) {
         // Load configuration from environment
         const smsConfig = this.environmentService.getSMSApiConfig();
@@ -89,31 +93,37 @@ export class SMSService {
         });
 
         const url = `${this.baseUrl}sms.do`;
-        const corsUrl = '/api/sms.do'; // CORS proxy endpoint   
 
-        return this.http.post<SMSResponse>(corsUrl, body, this.getHttpOptions()).pipe(
-            // Retry logic for temporary errors
+        // ✅ NEW: Wrap request in circuit breaker
+        const request$ = this.http.post<SMSResponse>(url, body, this.getHttpOptions()).pipe(
+            // ✅ ENHANCED: Smart retry with strategy selection
             retryWhen(errors =>
                 errors.pipe(
                     mergeMap((error, index) => {
-                        if (index >= this.maxRetries || !this.shouldRetry(error)) {
+                        // Get appropriate retry strategy for this error
+                        const strategy = this.getRetryStrategy(error);
+
+                        if (index >= strategy.maxAttempts || !this.shouldRetry(error)) {
                             return throwError(() => error);
                         }
-                        const delay = this.exponentialBackoff(index);
-                        console.log(`🔄 Retry ${index + 1}/${this.maxRetries} after ${delay}ms...`);
+
+                        // Calculate delay using strategy
+                        const delay = this.calculateRetryDelay(index, strategy);
+
+                        if (this.environmentService.isConsoleLoggingEnabled()) {
+                            console.log(`🔄 Retry ${index + 1}/${strategy.maxAttempts} (${strategy.name}) after ${delay}ms...`);
+                        }
+
                         return timer(delay);
                     })
                 )
             ),
-            // Error handling
             catchError(error => this.handleSMSError(error)),
-            // Success notification
             tap(response => {
                 if (this.environmentService.isConsoleLoggingEnabled()) {
                     console.log('✅ SMS sent successfully:', response);
                 }
 
-                // Log successful sends (optional - LOW severity)
                 this.errorLogger.logError(
                     `SMS sent successfully: ${response.count} messages`,
                     ErrorContext.SMS_API,
@@ -125,6 +135,85 @@ export class SMSService {
                 );
             })
         );
+
+        // Execute through circuit breaker
+        return this.circuitBreaker.execute(request$, 'SMS Send');
+    }
+
+    /**
+ * Get appropriate retry strategy based on error type
+ * @private
+ */
+    private getRetryStrategy(error: any): RetryStrategyConfig {
+        const errorConfig = this.environmentService.getConfig().errorHandling;
+        const strategies = errorConfig.retryStrategies;
+
+        if (!strategies) {
+            // Fallback to default strategy
+            return {
+                name: 'Default Strategy',
+                maxAttempts: this.maxRetries,
+                baseDelay: this.retryDelay,
+                useExponentialBackoff: true,
+                backoffMultiplier: 2,
+                maxDelay: 30000,
+                errorCodes: []
+            };
+        }
+
+        let errorCode: number | undefined;
+
+        // Extract error code
+        if (error instanceof HttpErrorResponse) {
+            if (error.status === 429) {
+                errorCode = 429;
+            } else if (error.status >= 500) {
+                errorCode = error.status;
+            } else if (error.error?.error) {
+                errorCode = error.error.error;
+            }
+        }
+
+        // Match strategy by error code
+        if (errorCode) {
+            // Check rate limit strategy
+            if (strategies.rateLimitStrategy.errorCodes.includes(errorCode)) {
+                return strategies.rateLimitStrategy;
+            }
+
+            // Check server error strategy
+            if (strategies.serverErrorStrategy.errorCodes.includes(errorCode)) {
+                return strategies.serverErrorStrategy;
+            }
+
+            // Check overload strategy
+            if (strategies.overloadStrategy.errorCodes.includes(errorCode)) {
+                return strategies.overloadStrategy;
+            }
+        }
+
+        // Default strategy
+        return strategies.defaultStrategy;
+    }
+
+    /**
+ * Calculate retry delay based on strategy configuration
+ * @private
+ */
+    private calculateRetryDelay(retryIndex: number, strategy: RetryStrategyConfig): number {
+        let delay: number;
+
+        if (strategy.useExponentialBackoff) {
+            // Exponential backoff: baseDelay * (multiplier ^ retryIndex)
+            const multiplier = strategy.backoffMultiplier || 2;
+            delay = strategy.baseDelay * Math.pow(multiplier, retryIndex);
+        } else {
+            // Linear backoff: baseDelay * (retryIndex + 1)
+            delay = strategy.baseDelay * (retryIndex + 1);
+        }
+
+        // Apply max delay cap
+        return Math.min(delay, strategy.maxDelay);
     }
 
     /**
@@ -163,14 +252,17 @@ export class SMSService {
 
         const url = `${this.baseUrl}sms.do`;
 
-        return this.http.post<BulkSMSResponse>(url, body, this.getHttpOptions()).pipe(
+        const request$ = this.http.post<BulkSMSResponse>(url, body, this.getHttpOptions()).pipe(
             retryWhen(errors =>
                 errors.pipe(
                     mergeMap((error, index) => {
-                        if (index >= this.maxRetries || !this.shouldRetry(error)) {
+                        const strategy = this.getRetryStrategy(error);
+
+                        if (index >= strategy.maxAttempts || !this.shouldRetry(error)) {
                             return throwError(() => error);
                         }
-                        const delay = this.exponentialBackoff(index);
+
+                        const delay = this.calculateRetryDelay(index, strategy);
                         return timer(delay);
                     })
                 )
@@ -181,12 +273,43 @@ export class SMSService {
                 if (this.environmentService.isConsoleLoggingEnabled()) {
                     console.log('✅ Bulk SMS sent:', {
                         total: response.count,
-                        successful: response.successful_count,
-                        failed: response.failed_count,
-                        cost: response.total_cost
+                        successful: response['successful_count'],
+                        failed: response['failed_count'],
+                        cost: response['total_cost']
                     });
                 }
             })
+        );
+
+        // Execute through circuit breaker
+        return this.circuitBreaker.execute(request$, 'Bulk SMS Send');
+    }
+
+    /**
+ * Get circuit breaker status (for monitoring/debugging)
+ */
+    getCircuitBreakerStatus(): {
+        state: string;
+        stats: any;
+        isHealthy: boolean;
+    } {
+        const stats = this.circuitBreaker.getStats();
+
+        return {
+            state: stats.state,
+            stats: stats,
+            isHealthy: stats.state === 'CLOSED'
+        };
+    }
+
+    /**
+     * Reset circuit breaker (admin/testing purposes)
+     */
+    resetCircuitBreaker(): void {
+        this.circuitBreaker.reset();
+        this.notificationService.info(
+            'Circuit Breaker Reset',
+            'Circuit breaker е възстановен до нормално състояние'
         );
     }
 

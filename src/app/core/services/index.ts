@@ -16,6 +16,13 @@ export { SMSService } from './sms.service';
 // SMS Template service for managing templates
 export { SMSTemplateService } from './sms-template.service';
 
+// Error handling services
+export { ErrorLoggerService } from './error-logger.service';
+
+// Circuit Breaker service
+export { CircuitBreakerService, CircuitState } from './circuit-breaker.service';
+export type { CircuitStats } from './circuit-breaker.service';
+
 // Re-export environment interfaces
 export type {
     Environment,
@@ -23,7 +30,10 @@ export type {
     AppConfig,
     ErrorHandlingConfig,
     DevelopmentConfig,
-    ProductionSpecificConfig
+    ProductionSpecificConfig,
+    RetryStrategyConfig,
+    CircuitBreakerConfig,
+    RetryQueueConfig,
 } from '../../../environments/environment.interface';
 
 // Re-export all models for easy access
