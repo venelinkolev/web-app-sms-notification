@@ -13,10 +13,14 @@ import {
     SMSErrorResponse,
     SMS_ERROR_CODES,
     SMSErrorCode,
+    SMS_ERROR_CODES_EXTENDED,
     SMSMessageResult,
     SMSSendResult,
     BatchSMSCompleteResult,
-    InvalidNumber
+    InvalidNumber,
+    getSMSErrorCodeExtended,
+    getSMSErrorMessageBG,
+    getSMSErrorSeverity
 } from '../models';
 import { ErrorLoggerService } from './error-logger.service';
 import { ErrorContext, ErrorSeverity } from '../models/error.models';
@@ -288,60 +292,105 @@ export class SMSService {
     private handleSMSError(error: any): Observable<never> {
         let errorMessage = 'Неизвестна грешка при изпращане на SMS';
         let errorCode: number | undefined;
+        let extendedErrorInfo: ReturnType<typeof getSMSErrorCodeExtended>;
 
         if (error instanceof HttpErrorResponse) {
-            // HTTP errors
+            // HTTP errors - map to SMS error codes
             if (error.status === 401) {
-                errorMessage = 'Невалиден API token или липсва оторизация';
                 errorCode = 1001;
             } else if (error.status === 403) {
-                errorMessage = 'Достъпът е отказан. Проверете IP whitelist и credits';
                 errorCode = 105;
             } else if (error.status === 429) {
-                errorMessage = 'Rate limit exceeded (100 req/sec). Опитайте отново след малко';
                 errorCode = 429;
             } else if (error.status >= 500) {
-                errorMessage = 'SMS API сървърна грешка. Опитайте отново по-късно';
                 errorCode = 201;
             } else if (error.error) {
                 // API error response
                 const apiError = error.error as SMSErrorResponse;
-                if (apiError.error && SMS_ERROR_CODES[apiError.error as SMSErrorCode]) {
+                if (apiError.error) {
                     errorCode = apiError.error;
-                    errorMessage = SMS_ERROR_CODES[apiError.error as SMSErrorCode];
-                } else if (apiError.message) {
-                    errorMessage = apiError.message;
                 }
+            }
+
+            // Get extended error info if code is available
+            if (errorCode) {
+                extendedErrorInfo = getSMSErrorCodeExtended(errorCode);
+                if (extendedErrorInfo) {
+                    // Use Bulgarian message from extended codes
+                    errorMessage = extendedErrorInfo.messageBG;
+                } else {
+                    // Fallback to old error codes for backward compatibility
+                    errorMessage = SMS_ERROR_CODES[errorCode as SMSErrorCode] || errorMessage;
+                }
+            } else if (error.error?.message) {
+                errorMessage = error.error.message;
             }
         } else if (error.message) {
             errorMessage = error.message;
         }
 
-        // ✅ NEW: Log error with ErrorLoggerService
-        this.errorLogger.logSMSError(error, errorCode, {
+        // Determine severity
+        const severity = errorCode
+            ? getSMSErrorSeverity(errorCode)
+            : ErrorSeverity.MEDIUM;
+
+        // Build metadata with extended info
+        const metadata: Record<string, any> = {
             message: errorMessage,
             httpStatus: error.status,
-            url: error.url
-        });
+            url: error.url,
+            errorCode: errorCode
+        };
 
-        // Log error (existing)
+        // Add extended error details to metadata
+        if (extendedErrorInfo) {
+            metadata['severity'] = extendedErrorInfo['severity'];
+            metadata['recoverable'] = extendedErrorInfo['recoverable'];
+            metadata['retryable'] = extendedErrorInfo['retryable'];
+            metadata['suggestion'] = extendedErrorInfo['suggestion'];
+            metadata['messageEN'] = extendedErrorInfo['message'];
+        }
+
+        // ✅ ENHANCED: Log error with ErrorLoggerService including severity
+        this.errorLogger.logError(
+            error,
+            ErrorContext.SMS_API,
+            severity,
+            metadata
+        );
+
+        // Log to console (development only)
         if (this.environmentService.isConsoleLoggingEnabled()) {
             console.error('❌ SMS API Error:', {
                 code: errorCode,
                 message: errorMessage,
+                severity: severity,
+                suggestion: extendedErrorInfo?.['suggestion'],
                 details: error
             });
+        }
+
+        // Build notification message
+        let notificationMessage = errorMessage;
+
+        // Add suggestion to notification for recoverable errors
+        if (extendedErrorInfo?.['recoverable'] && extendedErrorInfo['suggestion']) {
+            notificationMessage += `\n\n💡 ${extendedErrorInfo['suggestion']}`;
         }
 
         // Show notification
         this.notificationService.error(
             `SMS грешка ${errorCode ? `(${errorCode})` : ''}`,
-            errorMessage
+            notificationMessage
         );
 
         return throwError(() => ({
             code: errorCode,
             message: errorMessage,
+            severity: severity,
+            suggestion: extendedErrorInfo?.['suggestion'],
+            recoverable: extendedErrorInfo?.['recoverable'] ?? false,
+            retryable: extendedErrorInfo?.['retryable'] ?? false,
             details: error
         }));
     }
@@ -352,13 +401,21 @@ export class SMSService {
     private shouldRetry(error: any): boolean {
         if (error instanceof HttpErrorResponse) {
             // Retry on rate limit and server errors
-            return error.status === 429 || error.status >= 500;
+            if (error.status === 429 || error.status >= 500) {
+                return true;
+            }
         }
 
-        // Check API error codes
+        // Check API error codes using extended info
         if (error.error?.error) {
             const errorCode = error.error.error;
-            // Retry on system overload and queue capacity exceeded
+            const extendedInfo = getSMSErrorCodeExtended(errorCode);
+
+            if (extendedInfo) {
+                return extendedInfo['retryable'];
+            }
+
+            // Fallback to old logic
             return errorCode === 201 || errorCode === 202;
         }
 

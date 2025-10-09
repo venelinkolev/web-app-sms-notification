@@ -1,3 +1,5 @@
+import { ErrorSeverity } from './error.models';
+
 /**
  * SMS message statuses from SMSApi.bg
  */
@@ -294,6 +296,187 @@ export const SMS_ERROR_CODES = {
  * SMS API error codes type
  */
 export type SMSErrorCode = keyof typeof SMS_ERROR_CODES;
+
+/**
+ * Extended SMS error code with detailed metadata
+ */
+export interface SMSErrorCodeExtended {
+    /** Numeric error code */
+    code: number;
+
+    /** Error message in English */
+    message: string;
+
+    /** Error message in Bulgarian */
+    messageBG: string;
+
+    /** Error severity level */
+    severity: ErrorSeverity;
+
+    /** Whether error is recoverable by user action */
+    recoverable: boolean;
+
+    /** Whether operation should be retried automatically */
+    retryable: boolean;
+
+    /** User-friendly suggestion in Bulgarian (formal form) */
+    suggestion: string;
+}
+
+/**
+ * Extended SMS error codes with detailed metadata and Bulgarian translations
+ * Use this for enhanced error handling with severity levels and recovery suggestions
+ */
+export const SMS_ERROR_CODES_EXTENDED: Record<number, SMSErrorCodeExtended> = {
+    11: {
+        code: 11,
+        message: 'Invalid credentials or message too long',
+        messageBG: 'Невалиден API token или съобщението е твърде дълго',
+        severity: ErrorSeverity.HIGH,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Моля, проверете вашия API token или намалете дължината на съобщението. Максимум 160 символа за латиница или 70 за кирилица.'
+    },
+    13: {
+        code: 13,
+        message: 'No valid phone numbers provided',
+        messageBG: 'Не са предоставени валидни телефонни номера',
+        severity: ErrorSeverity.MEDIUM,
+        recoverable: true,
+        retryable: false,
+        suggestion: 'Моля, проверете телефонните номера. Трябва да бъдат в международен формат (+359...).'
+    },
+    14: {
+        code: 14,
+        message: 'Invalid sender name',
+        messageBG: 'Невалидно име на подателя',
+        severity: ErrorSeverity.MEDIUM,
+        recoverable: true,
+        retryable: false,
+        suggestion: 'Името на подателя трябва да бъде 1-11 символа, само букви и цифри. Моля, използвайте верифицирано име.'
+    },
+    15: {
+        code: 15,
+        message: 'Message contains prohibited content',
+        messageBG: 'Съобщението съдържа забранено съдържание',
+        severity: ErrorSeverity.HIGH,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Вашето съобщение съдържа забранени думи или съдържание. Моля, променете текста на съобщението.'
+    },
+    103: {
+        code: 103,
+        message: 'Insufficient account credits',
+        messageBG: 'Недостатъчен баланс в акаунта',
+        severity: ErrorSeverity.HIGH,
+        recoverable: true,
+        retryable: false,
+        suggestion: 'Няма достатъчно credits за изпращане на SMS. Моля, добавете credits към вашия акаунт в портала на SMSApi.bg.'
+    },
+    104: {
+        code: 104,
+        message: 'Account suspended or blocked',
+        messageBG: 'Акаунтът е спрян или блокиран',
+        severity: ErrorSeverity.CRITICAL,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Вашият акаунт е временно спрян или блокиран. Моля, свържете се със support на SMSApi.bg за повече информация.'
+    },
+    105: {
+        code: 105,
+        message: 'IP address not whitelisted',
+        messageBG: 'IP адресът не е одобрен',
+        severity: ErrorSeverity.CRITICAL,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Вашият IP адрес не е в белия списък. Моля, добавете го в настройките на акаунта си на https://portal.smsapi.bg/react/ip-filters.'
+    },
+    106: {
+        code: 106,
+        message: 'Credit reservation failed for bulk operation',
+        messageBG: 'Грешка при резервация на credits за групово изпращане',
+        severity: ErrorSeverity.HIGH,
+        recoverable: true,
+        retryable: false,
+        suggestion: 'Не може да се резервират достатъчно credits за груповата операция. Моля, проверете баланса си и опитайте с по-малко съобщения.'
+    },
+    201: {
+        code: 201,
+        message: 'System overloaded, retry later',
+        messageBG: 'Системата е претоварена',
+        severity: ErrorSeverity.MEDIUM,
+        recoverable: true,
+        retryable: true,
+        suggestion: 'SMS системата е временно претоварена. Моля, изчакайте няколко минути и опитайте отново.'
+    },
+    202: {
+        code: 202,
+        message: 'Queue capacity exceeded',
+        messageBG: 'Надвишен капацитет на опашката',
+        severity: ErrorSeverity.MEDIUM,
+        recoverable: true,
+        retryable: true,
+        suggestion: 'Опашката за SMS е пълна в момента. Моля, изчакайте няколко минути и опитайте отново.'
+    },
+    429: {
+        code: 429,
+        message: 'Rate limit exceeded',
+        messageBG: 'Превишен лимит на заявки',
+        severity: ErrorSeverity.MEDIUM,
+        recoverable: true,
+        retryable: true,
+        suggestion: 'Изпратихте твърде много заявки за кратко време (лимит: 100 заявки/секунда). Моля, изчакайте малко и опитайте отново.'
+    },
+    1001: {
+        code: 1001,
+        message: 'Missing authorization header',
+        messageBG: 'Липсва authorization header',
+        severity: ErrorSeverity.CRITICAL,
+        recoverable: false,
+        retryable: false,
+        suggestion: 'Липсва оторизация в заявката. Моля, проверете дали сте задали правилно API token в настройките на приложението.'
+    }
+};
+
+/**
+ * Type for SMS error code numbers
+ */
+export type SMSErrorCodeNumber = keyof typeof SMS_ERROR_CODES_EXTENDED;
+
+/**
+ * Get extended error code details by code number
+ */
+export function getSMSErrorCodeExtended(code: number): SMSErrorCodeExtended | undefined {
+    return SMS_ERROR_CODES_EXTENDED[code];
+}
+
+/**
+ * Check if error code is retryable
+ */
+export function isSMSErrorRetryable(code: number): boolean {
+    return SMS_ERROR_CODES_EXTENDED[code]?.retryable ?? false;
+}
+
+/**
+ * Check if error is recoverable by user action
+ */
+export function isSMSErrorRecoverable(code: number): boolean {
+    return SMS_ERROR_CODES_EXTENDED[code]?.recoverable ?? false;
+}
+
+/**
+ * Get Bulgarian error message by code
+ */
+export function getSMSErrorMessageBG(code: number): string {
+    return SMS_ERROR_CODES_EXTENDED[code]?.messageBG ?? 'Неизвестна грешка';
+}
+
+/**
+ * Get error severity by code
+ */
+export function getSMSErrorSeverity(code: number): ErrorSeverity {
+    return SMS_ERROR_CODES_EXTENDED[code]?.severity ?? ErrorSeverity.MEDIUM;
+}
 
 /**
  * SMS Service Request Parameters
