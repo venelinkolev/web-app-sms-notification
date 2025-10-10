@@ -237,9 +237,10 @@ export class SMSService {
         });
 
         const url = `${this.baseUrl}sms.do`;
+        const testUrl = '/api/sms.do'; // For local testing with proxy
 
         // ✅ NEW: Wrap request in circuit breaker
-        const request$ = this.http.post<SMSResponse>(url, body, this.getHttpOptions()).pipe(
+        const request$ = this.http.post<SMSResponse>(testUrl, body, this.getHttpOptions()).pipe(
             // ✅ ENHANCED: Smart retry with strategy selection
             retryWhen(errors =>
                 errors.pipe(
