@@ -23,6 +23,10 @@ export { ErrorLoggerService } from './error-logger.service';
 export { CircuitBreakerService, CircuitState } from './circuit-breaker.service';
 export type { CircuitStats } from './circuit-breaker.service';
 
+// Send Queue Service and related types
+export { SendQueueService, SendStatus } from './send-queue.service';
+export type { SendProgress, QueueState } from './send-queue.service';
+
 // Re-export environment interfaces
 export type {
     Environment,
