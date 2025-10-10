@@ -1,7 +1,6 @@
-// src/app/core/services/sms.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, timer, of } from 'rxjs';
+import { Observable, throwError, timer, of, forkJoin } from 'rxjs';
 import { catchError, retry, retryWhen, mergeMap, finalize, tap, map } from 'rxjs/operators';
 import { EnvironmentService } from './environment.service';
 import { NotificationService } from './notification.service';
@@ -20,13 +19,158 @@ import {
     InvalidNumber,
     getSMSErrorCodeExtended,
     getSMSErrorMessageBG,
-    getSMSErrorSeverity
+    getSMSErrorSeverity,
+    BatchOperationResult,
+    isSMSErrorRetryable,
+    BatchSMSMessage,
+    RetryOptions
 } from '../models';
 import { ErrorLoggerService } from './error-logger.service';
 import { ErrorContext, ErrorSeverity } from '../models/error.models';
 import { CircuitBreakerService } from './circuit-breaker.service';
 import type { RetryStrategyConfig } from '../../../environments/environment.interface';
 
+/**
+ * Batch Result Tracker - Private utility class for tracking batch SMS operations
+ * Tracks individual message success/failure with detailed metadata
+ */
+class BatchResultTracker {
+    private successful: SMSSendResult[] = [];
+    private failed: SMSSendResult[] = [];
+    private invalid: Array<{ clientId: string; phoneNumber: string; reason: string }> = [];
+    private startTime: Date;
+    private sender: string;
+    private priority: boolean;
+
+    constructor(sender: string, priority: boolean = false) {
+        this.startTime = new Date();
+        this.sender = sender;
+        this.priority = priority;
+    }
+
+    /**
+     * Add successful SMS result
+     */
+    addSuccess(result: SMSSendResult): void {
+        this.successful.push(result);
+    }
+
+    /**
+     * Add failed SMS result
+     */
+    addFailure(result: SMSSendResult): void {
+        this.failed.push(result);
+    }
+
+    /**
+     * Add invalid phone number
+     */
+    addInvalid(clientId: string, phoneNumber: string, reason: string): void {
+        this.invalid.push({ clientId, phoneNumber, reason });
+    }
+
+    /**
+     * Check if any failed messages can be retried
+     */
+    canRetry(): boolean {
+        return this.failed.some(result =>
+            result.errorCode && isSMSErrorRetryable(result.errorCode)
+        );
+    }
+
+    /**
+     * Get list of retryable failed messages
+     */
+    getRetryableMessages(): Array<{
+        clientId: string;
+        phoneNumber: string;
+        message: string;
+        errorCode: number;
+        errorMessage: string;
+    }> {
+        return this.failed
+            .filter(result =>
+                result.errorCode &&
+                isSMSErrorRetryable(result.errorCode) &&
+                result.message // ✅ Само ако има message
+            )
+            .map(result => ({
+                clientId: result.clientId,
+                phoneNumber: result.phoneNumber,
+                message: result.message!, // ✅ Използваме съхраненото message
+                errorCode: result.errorCode!,
+                errorMessage: result.error || 'Unknown error'
+            }));
+    }
+
+    /**
+     * Calculate statistics
+     */
+    private calculateStats() {
+        const totalAttempted = this.successful.length + this.failed.length + this.invalid.length;
+        const successfulCount = this.successful.length;
+        const failedCount = this.failed.length;
+        const invalidCount = this.invalid.length;
+
+        const totalCost = this.successful.reduce((sum, result) => sum + (result.cost || 0), 0);
+        const averageCost = successfulCount > 0 ? totalCost / successfulCount : 0;
+
+        const successRate = totalAttempted > 0 ? successfulCount / totalAttempted : 0;
+        const failureRate = totalAttempted > 0 ? failedCount / totalAttempted : 0;
+
+        return {
+            totalAttempted,
+            successfulCount,
+            failedCount,
+            invalidCount,
+            successRate,
+            failureRate,
+            totalCost,
+            averageCost
+        };
+    }
+
+    /**
+     * Get final batch operation result
+     */
+    getResult(): BatchOperationResult {
+        const endTime = new Date();
+        const duration = endTime.getTime() - this.startTime.getTime();
+
+        return {
+            successful: this.successful,
+            failed: this.failed,
+            invalid: this.invalid,
+            stats: this.calculateStats(),
+            canRetry: this.canRetry(),
+            retryableMessages: this.getRetryableMessages(),
+            metadata: {
+                startTime: this.startTime,
+                endTime,
+                duration,
+                sender: this.sender,
+                priority: this.priority
+            }
+        };
+    }
+
+    /**
+     * Get current progress (for monitoring)
+     */
+    getProgress(): {
+        processed: number;
+        successful: number;
+        failed: number;
+        invalid: number;
+    } {
+        return {
+            processed: this.successful.length + this.failed.length + this.invalid.length,
+            successful: this.successful.length,
+            failed: this.failed.length,
+            invalid: this.invalid.length
+        };
+    }
+}
 
 /**
  * SMS Service for SMSApi.bg integration
@@ -571,5 +715,259 @@ export class SMSService {
             sender: this.defaultSender,
             testMode: config.testMode
         };
+    }
+
+    /**
+     * Send batch SMS with detailed per-recipient tracking
+     * Tracks individual success/failure for each message
+     * 
+     * @param messages - Array of messages with clientId, phoneNumber, message
+     * @param options - Optional sending options (sender, priority, etc.)
+     * @returns Observable<BatchOperationResult> with detailed tracking
+     */
+    sendBatchWithTracking(
+        messages: BatchSMSMessage[],
+        options?: BulkSMSOptions
+    ): Observable<BatchOperationResult> {
+        // Validation
+        if (!messages || messages.length === 0) {
+            this.notificationService.error('SMS грешка', 'Няма съобщения за изпращане');
+            return throwError(() => new Error('No messages provided'));
+        }
+
+        if (messages.length > 10000) {
+            this.notificationService.warning(
+                'Твърде много съобщения',
+                `Максимум 10,000 съобщения на заявка. Текущо: ${messages.length}`
+            );
+            return throwError(() => new Error('Too many messages (max 10,000)'));
+        }
+
+        const sender = options?.from || this.defaultSender;
+        const priority = options?.priority || false;
+        const tracker = new BatchResultTracker(sender, priority);
+
+        // Log operation start
+        if (this.environmentService.isConsoleLoggingEnabled()) {
+            console.group('📨 Batch SMS with Tracking');
+            console.log('Total messages:', messages.length);
+            console.log('Sender:', sender);
+            console.log('Priority:', priority);
+            console.groupEnd();
+        }
+
+        // Използваме forkJoin за паралелно изпращане
+        const sendOperations = messages.map((msg, index) =>
+            this.sendSMS({
+                to: msg.phoneNumber,
+                message: msg.message,
+                from: sender,
+                priority: priority,
+                customId: msg.customId || `${msg.clientId}-${index}`
+            }).pipe(
+                tap(response => {
+                    // Success - добавяме в tracker
+                    const result: SMSSendResult = {
+                        clientId: msg.clientId,
+                        phoneNumber: msg.phoneNumber,
+                        message: msg.message, // ✅ Съхраняваме message за retry
+                        messageId: response.list[0]?.id,
+                        status: 'success',
+                        cost: response.list[0]?.points || 0,
+                        timestamp: new Date()
+                    };
+
+                    tracker.addSuccess(result);
+
+                    if (this.environmentService.isConsoleLoggingEnabled()) {
+                        console.log(`✅ SMS sent to ${msg.clientId} (${msg.phoneNumber})`);
+                    }
+                }),
+                catchError(error => {
+                    // Failure - добавяме в tracker
+                    const errorCode = error.code || error.status;
+                    const errorMessage = error.message || 'Unknown error';
+
+                    const result: SMSSendResult = {
+                        clientId: msg.clientId,
+                        phoneNumber: msg.phoneNumber,
+                        message: msg.message, // ✅ Съхраняваме message за retry
+                        status: 'failed',
+                        error: errorMessage,
+                        errorCode: errorCode,
+                        timestamp: new Date()
+                    };
+
+                    tracker.addFailure(result);
+
+                    // Log в ErrorLoggerService
+                    this.errorLogger.logSMSError(error, errorCode, {
+                        clientId: msg.clientId,
+                        phoneNumber: msg.phoneNumber,
+                        operation: 'batch_send'
+                    });
+
+                    if (this.environmentService.isConsoleLoggingEnabled()) {
+                        console.error(`❌ SMS failed for ${msg.clientId}: ${errorMessage}`);
+                    }
+
+                    // Връщаме празен observable за да продължи операцията
+                    return of(null);
+                })
+            )
+        );
+
+        // Изчакваме всички операции да завършат
+        return forkJoin(sendOperations).pipe(
+            map(() => {
+                const result = tracker.getResult();
+
+                // Final notification
+                this.notificationService.info(
+                    'Batch изпращане завършено',
+                    `✅ Успешни: ${result.stats.successfulCount}\n` +
+                    `❌ Неуспешни: ${result.stats.failedCount}\n` +
+                    `💰 Разход: ${result.stats.totalCost.toFixed(2)} credits`,
+                    7000
+                );
+
+                // Log в ErrorLogger
+                this.errorLogger.logError(
+                    `Batch SMS operation completed: ${result.stats.successfulCount}/${result.stats.totalAttempted} successful`,
+                    ErrorContext.SMS_API,
+                    result.stats.failedCount > 0 ? ErrorSeverity.MEDIUM : ErrorSeverity.LOW,
+                    {
+                        totalAttempted: result.stats.totalAttempted,
+                        successfulCount: result.stats.successfulCount,
+                        failedCount: result.stats.failedCount,
+                        successRate: result.stats.successRate,
+                        totalCost: result.stats.totalCost
+                    }
+                );
+
+                if (this.environmentService.isConsoleLoggingEnabled()) {
+                    console.group('📊 Batch Operation Result');
+                    console.log('Total attempted:', result.stats.totalAttempted);
+                    console.log('Successful:', result.stats.successfulCount);
+                    console.log('Failed:', result.stats.failedCount);
+                    console.log('Success rate:', (result.stats.successRate * 100).toFixed(1) + '%');
+                    console.log('Total cost:', result.stats.totalCost.toFixed(2), 'credits');
+                    console.log('Can retry:', result.canRetry);
+                    console.groupEnd();
+                }
+
+                return result;
+            }),
+            catchError(error => {
+                this.notificationService.error(
+                    'Грешка при batch изпращане',
+                    error.message || 'Неизвестна грешка'
+                );
+                return throwError(() => error);
+            })
+        );
+    }
+
+    /**
+     * Retry only failed messages from a previous batch operation
+     * 
+     * @param previousResult - Result from previous sendBatchWithTracking call
+     * @param options - Optional retry options
+     * @returns Observable<BatchOperationResult> with retry results
+     */
+    retryFailedMessages(
+        previousResult: BatchOperationResult,
+        options?: RetryOptions
+    ): Observable<BatchOperationResult> {
+        // Check if there are retryable messages
+        if (!previousResult.canRetry) {
+            this.notificationService.warning(
+                'Няма съобщения за retry',
+                'Всички неуспешни съобщения не могат да бъдат повторени автоматично'
+            );
+            return throwError(() => new Error('No retryable messages'));
+        }
+
+        const retryableMessages = previousResult.retryableMessages;
+
+        if (retryableMessages.length === 0) {
+            this.notificationService.info('Няма съобщения за retry', 'Всички съобщения са изпратени успешно');
+            return of(previousResult); // Връщаме същия резултат
+        }
+
+        // Log retry attempt
+        if (this.environmentService.isConsoleLoggingEnabled()) {
+            console.group('🔄 Retry Failed Messages');
+            console.log('Retrying messages:', retryableMessages.length);
+            console.log('Error codes:', retryableMessages.map(m => m.errorCode));
+            console.groupEnd();
+        }
+
+        this.notificationService.info(
+            'Retry започна',
+            `Опитваме се да изпратим отново ${retryableMessages.length} неуспешни съобщения...`,
+            3000
+        );
+
+        // Log в ErrorLogger
+        this.errorLogger.logError(
+            `Retrying ${retryableMessages.length} failed SMS messages`,
+            ErrorContext.SMS_API,
+            ErrorSeverity.MEDIUM,
+            {
+                retryCount: retryableMessages.length,
+                errorCodes: retryableMessages.map(m => m.errorCode)
+            }
+        );
+
+        // Конвертираме retryable messages обратно в BatchSMSMessage формат
+        // ВАЖНО: message полето трябва да се запази от оригиналната операция
+        // За целта използваме failed резултатите от previousResult
+        // Конвертираме retryable messages обратно в BatchSMSMessage формат
+        const messagesToRetry: BatchSMSMessage[] = previousResult.failed
+            .filter(failedMsg =>
+                failedMsg.errorCode &&
+                isSMSErrorRetryable(failedMsg.errorCode) &&
+                failedMsg.message // ✅ Проверяваме дали има message
+            )
+            .map(failedMsg => ({
+                clientId: failedMsg.clientId,
+                phoneNumber: failedMsg.phoneNumber,
+                message: failedMsg.message!, // ✅ Използваме съхраненото message
+                customId: `retry-${failedMsg.clientId}-${Date.now()}`
+            }));
+
+        if (messagesToRetry.length === 0) {
+            this.notificationService.warning(
+                'Няма валидни съобщения за retry',
+                'Не са намерени съобщения с валидно съдържание за повторно изпращане'
+            );
+            return throwError(() => new Error('No valid messages to retry'));
+        }
+
+        // Retry with same options as original
+        return this.sendBatchWithTracking(messagesToRetry, {
+            from: previousResult.metadata.sender,
+            priority: previousResult.metadata.priority
+        }).pipe(
+            tap(retryResult => {
+                // Log retry results
+                if (this.environmentService.isConsoleLoggingEnabled()) {
+                    console.group('🔄 Retry Results');
+                    console.log('Retry successful:', retryResult.stats.successfulCount);
+                    console.log('Retry failed:', retryResult.stats.failedCount);
+                    console.log('Success rate:', (retryResult.stats.successRate * 100).toFixed(1) + '%');
+                    console.groupEnd();
+                }
+
+                // Show notification with retry results
+                this.notificationService.info(
+                    'Retry завършен',
+                    `✅ Успешни: ${retryResult.stats.successfulCount}\n` +
+                    `❌ Все още неуспешни: ${retryResult.stats.failedCount}`,
+                    7000
+                );
+            })
+        );
     }
 }

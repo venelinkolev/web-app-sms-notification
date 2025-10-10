@@ -561,6 +561,9 @@ export interface SMSSendResult {
     /** Phone number used */
     phoneNumber: string;
 
+    /** Original message content (for retry purposes) */
+    message?: string;
+
     /** SMS message ID from API */
     messageId?: string;
 
@@ -606,4 +609,114 @@ export interface BatchSMSCompleteResult {
 
     /** Duration in milliseconds */
     duration: number;
+}
+
+/**
+ * Detailed batch operation result with retry support
+ * Used for tracking individual message success/failure in batch operations
+ */
+export interface BatchOperationResult {
+    /** Successfully sent messages with details */
+    successful: SMSSendResult[];
+
+    /** Failed messages with error details */
+    failed: SMSSendResult[];
+
+    /** Invalid phone numbers that were rejected */
+    invalid: Array<{
+        clientId: string;
+        phoneNumber: string;
+        reason: string;
+    }>;
+
+    /** Detailed statistics */
+    stats: {
+        /** Total messages attempted */
+        totalAttempted: number;
+
+        /** Successfully sent count */
+        successfulCount: number;
+
+        /** Failed send count */
+        failedCount: number;
+
+        /** Invalid phone count */
+        invalidCount: number;
+
+        /** Success rate (0-1) */
+        successRate: number;
+
+        /** Failure rate (0-1) */
+        failureRate: number;
+
+        /** Total cost in credits */
+        totalCost: number;
+
+        /** Average cost per successful message */
+        averageCost: number;
+    };
+
+    /** Whether any failed messages can be retried */
+    canRetry: boolean;
+
+    /** List of failed messages that are retryable */
+    retryableMessages: Array<{
+        clientId: string;
+        phoneNumber: string;
+        message: string;
+        errorCode: number;
+        errorMessage: string;
+    }>;
+
+    /** Batch operation metadata */
+    metadata: {
+        /** Batch start time */
+        startTime: Date;
+
+        /** Batch end time */
+        endTime: Date;
+
+        /** Duration in milliseconds */
+        duration: number;
+
+        /** Sender name used */
+        sender: string;
+
+        /** Whether priority sending was used */
+        priority: boolean;
+    };
+}
+
+/**
+ * Input for batch SMS with tracking
+ */
+export interface BatchSMSMessage {
+    /** Client record ID for tracking */
+    clientId: string;
+
+    /** Phone number in international format */
+    phoneNumber: string;
+
+    /** SMS message content */
+    message: string;
+
+    /** Optional custom message ID */
+    customId?: string;
+}
+
+/**
+ * Options for retry operation
+ */
+export interface RetryOptions {
+    /** Retry only specific error codes */
+    retryErrorCodes?: number[];
+
+    /** Maximum retry attempts per message */
+    maxRetries?: number;
+
+    /** Delay between retries (ms) */
+    retryDelay?: number;
+
+    /** Whether to use exponential backoff */
+    useExponentialBackoff?: boolean;
 }
