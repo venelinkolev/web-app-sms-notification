@@ -486,3 +486,426 @@
     width: 100%;
   }
 }
+
+// Errors Section
+.errors-section {
+  background: linear-gradient(to right, rgba(244, 67, 54, 0.05), var(--background-card));
+  border: 1px solid var(--error-color);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
+  animation: slideInDown 0.4s ease-out;
+  
+  h3 {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-size: var(--font-size-lg);
+    
+    &.text-error {
+      color: var(--error-color);
+    }
+  }
+  
+  .error-subtitle {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+    margin: 0 0 var(--spacing-md) 0;
+  }
+  
+  .errors-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+  }
+  
+  .error-card {
+    background: var(--background-card);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    border-radius: var(--border-radius-sm);
+    padding: var(--spacing-md);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      box-shadow: var(--shadow-sm);
+      transform: translateX(4px);
+    }
+    
+    .error-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xs);
+      
+      .error-icon {
+        font-size: var(--font-size-lg);
+        flex-shrink: 0;
+      }
+      
+      .error-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        
+        strong {
+          color: var(--text-primary);
+          font-size: var(--font-size-sm);
+        }
+        
+        .error-phone {
+          color: var(--text-secondary);
+          font-size: var(--font-size-xs);
+        }
+      }
+      
+      .error-code-badge {
+        font-size: var(--font-size-xs);
+        padding: 2px var(--spacing-xs);
+        background: rgba(244, 67, 54, 0.15);
+        color: var(--error-color);
+        border-radius: var(--border-radius-sm);
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+      }
+    }
+    
+    .error-message {
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      padding-left: calc(var(--font-size-lg) + var(--spacing-sm));
+      line-height: 1.5;
+    }
+  }
+  
+  .error-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid rgba(244, 67, 54, 0.2);
+  }
+}
+
+// Error Badge on SMS Preview Cards
+.sms-preview-card {
+  .sms-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+    
+    .client-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      
+      strong {
+        color: var(--text-primary);
+        font-size: var(--font-size-md);
+      }
+      
+      .phone-number {
+        color: var(--text-secondary);
+        font-size: var(--font-size-sm);
+      }
+    }
+    
+    .error-badge {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      padding: var(--spacing-xs) var(--spacing-sm);
+      background: rgba(244, 67, 54, 0.15);
+      border: 1px solid var(--error-color);
+      border-radius: var(--border-radius-sm);
+      color: var(--error-color);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      
+      &:hover {
+        background: rgba(244, 67, 54, 0.25);
+        transform: scale(1.05);
+      }
+      
+      .badge-code {
+        background: var(--error-color);
+        color: white;
+        padding: 2px 6px;
+        border-radius: var(--border-radius-sm);
+        font-family: 'Courier New', monospace;
+        font-size: 10px;
+      }
+    }
+  }
+  
+  // Dim the card if it has an error
+  &.has-error {
+    opacity: 0.8;
+    border-color: var(--error-color);
+    
+    &:hover {
+      opacity: 1;
+      box-shadow: 0 2px 8px rgba(244, 67, 54, 0.2);
+    }
+  }
+}
+
+// Animation for errors section
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .errors-section {
+    .error-card {
+      .error-header {
+        flex-wrap: wrap;
+      }
+    }
+    
+    .error-actions {
+      flex-direction: column;
+      
+      button {
+        width: 100%;
+      }
+    }
+  }
+  
+  .sms-preview-card {
+    .sms-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacing-sm);
+      
+      .error-badge {
+        align-self: flex-start;
+      }
+    }
+  }
+}
+
+// ===== ERROR DETAILS MODAL =====
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: var(--spacing-md);
+  animation: fadeIn 0.2s ease;
+  
+  @media (max-width: 768px) {
+    padding: var(--spacing-sm);
+  }
+}
+
+.modal-content {
+  background: var(--background-card);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-lg);
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
+  
+  &.error-modal {
+    border-top: 4px solid var(--error-color);
+  }
+  
+  @media (max-width: 768px) {
+    max-height: 95vh;
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(to bottom, var(--background-card), var(--background-hover));
+  
+  .modal-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    
+    .modal-icon {
+      font-size: var(--font-size-xl);
+    }
+    
+    h3 {
+      margin: 0;
+      font-size: var(--font-size-lg);
+      color: var(--text-primary);
+    }
+  }
+  
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: var(--font-size-xl);
+    cursor: pointer;
+    color: var(--text-disabled);
+    padding: var(--spacing-xs);
+    line-height: 1;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      color: var(--text-secondary);
+      background: var(--background-hover);
+    }
+  }
+}
+
+.modal-body {
+  padding: var(--spacing-lg);
+  overflow-y: auto;
+  flex: 1;
+  
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: var(--background-hover);
+    border-radius: var(--border-radius-sm);
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: var(--border-radius-sm);
+    
+    &:hover {
+      background: var(--text-disabled);
+    }
+  }
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border-top: 1px solid var(--border-color);
+  background: var(--background-hover);
+  
+  @media (max-width: 768px) {
+    flex-direction: column-reverse;
+    
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// SMS Error Details Section (in modal)
+.sms-error-details {
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: var(--background-hover);
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  
+  h4 {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  .detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-xs) 0;
+    
+    &:not(:last-child) {
+      border-bottom: 1px dashed var(--border-color);
+    }
+    
+    .detail-label {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      min-width: 120px;
+      flex-shrink: 0;
+    }
+    
+    .detail-value {
+      color: var(--text-primary);
+      font-size: var(--font-size-sm);
+      flex: 1;
+      word-wrap: break-word;
+      
+      &.message-preview {
+        background: var(--background-card);
+        padding: var(--spacing-sm);
+        border-radius: var(--border-radius-sm);
+        border: 1px solid var(--border-color);
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        line-height: 1.4;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      
+      .detail-label {
+        min-width: 0;
+      }
+    }
+  }
+}
+
+// Modal Animations
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// Prevent body scroll when modal is open
+body.modal-open {
+  overflow: hidden;
+}

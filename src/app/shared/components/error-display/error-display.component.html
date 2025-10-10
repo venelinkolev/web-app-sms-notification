@@ -1,0 +1,130 @@
+<div class="error-display" [class]="getSeverityClass()" [class.compact]="compact" [class.resolved]="error.resolved">
+
+    <!-- Error Header -->
+    <div class="error-header">
+        <div class="error-icon">
+            {{ getSeverityIcon() }}
+        </div>
+
+        <div class="error-info">
+            <!-- Severity & Context -->
+            <div class="error-badges">
+                <span class="severity-badge" [class]="getSeverityClass()">
+                    {{ getSeverityLabel() }}
+                </span>
+                <span class="context-badge">
+                    {{ getContextLabel() }}
+                </span>
+                @if (error.code) {
+                <span class="code-badge">
+                    Код: {{ error.code }}
+                </span>
+                }
+                @if (error.resolved) {
+                <span class="resolved-badge">
+                    ✓ Решено
+                </span>
+                }
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message">
+                @if (getBulgarianMessage()) {
+                <strong>{{ getBulgarianMessage() }}</strong>
+                } @else {
+                <strong>{{ error.message }}</strong>
+                }
+            </div>
+
+            <!-- Timestamp -->
+            <div class="error-timestamp">
+                {{ formatTimestamp(error.timestamp) }}
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="error-actions">
+            @if (showRetryButton && isRetryable() && !error.resolved) {
+            <button class="btn-icon btn-retry" (click)="onRetry()" title="Опитай отново">
+                🔄
+            </button>
+            }
+
+            @if (showDismissButton) {
+            <button class="btn-icon btn-dismiss" (click)="onDismiss()" title="Скрий">
+                ✕
+            </button>
+            }
+        </div>
+    </div>
+
+    <!-- Recovery Suggestion -->
+    @if (getRecoverySuggestion() && !error.resolved) {
+    <div class="error-suggestion">
+        <span class="suggestion-icon">💡</span>
+        <span class="suggestion-text">{{ getRecoverySuggestion() }}</span>
+    </div>
+    }
+
+    <!-- Resolution Notes -->
+    @if (error.resolved && error.resolutionNotes) {
+    <div class="error-resolution">
+        <strong>Бележки за решение:</strong>
+        <p>{{ error.resolutionNotes }}</p>
+        @if (error.resolvedAt) {
+        <small>Решено на: {{ formatTimestamp(error.resolvedAt) }}</small>
+        }
+    </div>
+    }
+
+    <!-- Details Section (Expandable) -->
+    <div class="error-details-section">
+        <button class="details-toggle" (click)="toggleDetails()">
+            <span class="toggle-icon">{{ detailsExpanded ? '▼' : '▶' }}</span>
+            <span>{{ detailsExpanded ? 'Скрий' : 'Покажи' }} технически детайли</span>
+        </button>
+
+        @if (detailsExpanded) {
+        <div class="error-details-content">
+
+            <!-- Technical Details -->
+            @if (error.technicalDetails) {
+            <div class="detail-block">
+                <h4>Технически детайли:</h4>
+                <pre>{{ error.technicalDetails }}</pre>
+            </div>
+            }
+
+            <!-- Metadata -->
+            @if (error.metadata) {
+            <div class="detail-block">
+                <h4>Метаданни:</h4>
+                <pre>{{ formatMetadata(error.metadata) }}</pre>
+            </div>
+            }
+
+            <!-- Stack Trace (Development only) -->
+            @if (error.stackTrace) {
+            <div class="detail-block">
+                <h4>Stack Trace:</h4>
+                <pre class="stack-trace">{{ error.stackTrace }}</pre>
+            </div>
+            }
+
+            <!-- Action Buttons -->
+            <div class="detail-actions">
+                <button class="btn btn-sm btn-outline" (click)="copyToClipboard()">
+                    📋 Копирай грешката
+                </button>
+
+                @if (!error.resolved && isRecoverable()) {
+                <button class="btn btn-sm btn-primary" (click)="onResolve()">
+                    ✓ Маркирай като решено
+                </button>
+                }
+            </div>
+        </div>
+        }
+    </div>
+
+</div>

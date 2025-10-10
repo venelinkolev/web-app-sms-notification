@@ -84,6 +84,49 @@
         </div>
     </div>
 
+    <!-- Errors Section (if any) -->
+    @if (showErrorsSection && errorsCount > 0) {
+    <div class="errors-section">
+        <h3 class="text-error">
+            ❌ Грешки при изпращане ({{ errorsCount }})
+        </h3>
+        <p class="error-subtitle">
+            Следните SMS съобщения не бяха изпратени успешно
+        </p>
+
+        <div class="errors-list">
+            @for (error of smsErrors.values(); track error.clientId) {
+            <div class="error-card">
+                <div class="error-header">
+                    <span class="error-icon">❌</span>
+                    <div class="error-info">
+                        <strong>{{ error.clientId }}</strong>
+                        <span class="error-phone">{{ error.phoneNumber }}</span>
+                    </div>
+                    @if (error.errorCode) {
+                    <span class="error-code-badge">Код: {{ error.errorCode }}</span>
+                    }
+                </div>
+                <div class="error-message">
+                    {{ error.error || 'Неизвестна грешка' }}
+                </div>
+            </div>
+            }
+        </div>
+
+        <div class="error-actions">
+            <button class="btn btn-outline" (click)="clearErrors()">
+                ✕ Скрий грешките
+            </button>
+            @if (lastSendResult && lastSendResult.canRetry) {
+            <button class="btn btn-primary" (click)="retrySending(lastSendResult)">
+                🔄 Опитай отново
+            </button>
+            }
+        </div>
+    </div>
+    }
+
     <!-- Preview Section -->
     <div class="preview-section card">
         <div class="section-header">
@@ -110,6 +153,16 @@
                             <strong>{{ getClientName(sms.clientId) }}</strong>
                             <span class="phone-number">{{ sms.phoneNumber }}</span>
                         </div>
+
+                        @if (hasSMSError(sms.clientId)) {
+                        <div class="error-badge" [title]="getSMSError(sms.clientId)?.error || 'Грешка'"
+                            (click)="showErrorDetails(sms.clientId); $event.stopPropagation()">
+                            ❌ Error
+                            @if (getSMSError(sms.clientId)?.errorCode) {
+                            <span class="badge-code">{{ getSMSError(sms.clientId)?.errorCode }}</span>
+                            }
+                        </div>
+                        }
                     </div>
                     <div class="sms-encoding">
                         {{ getEncodingIcon(sms.encoding) }}
@@ -191,5 +244,88 @@
         </p>
     </div>
 
+    }
+
+    <!-- Error Details Modal -->
+    @if (showErrorDetailsModal && selectedError) {
+    <div class="modal-overlay" (click)="closeErrorDetailsModal()">
+        <div class="modal-content error-modal" (click)="$event.stopPropagation()">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div class="modal-title">
+                    <span class="modal-icon">❌</span>
+                    <h3>Детайли за грешката</h3>
+                </div>
+                <button class="btn-close" (click)="closeErrorDetailsModal()" type="button">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <!-- Use ErrorDisplayComponent -->
+                <app-error-display [error]="convertSMSErrorToErrorLog(selectedError)"
+                    [showRetryButton]="lastSendResult?.canRetry || false" [showDismissButton]="false"
+                    [expandedByDefault]="true" (retry)="onRetryErrorFromDisplay($event)"
+                    (resolve)="onResolveErrorFromDisplay($event)">
+                </app-error-display>
+
+                <!-- Additional SMS-specific details -->
+                <div class="sms-error-details">
+                    <h4>Информация за SMS</h4>
+
+                    <div class="detail-row">
+                        <span class="detail-label">Клиент:</span>
+                        <span class="detail-value">{{ selectedError.clientId }}</span>
+                    </div>
+
+                    <div class="detail-row">
+                        <span class="detail-label">Телефон:</span>
+                        <span class="detail-value">{{ selectedError.phoneNumber }}</span>
+                    </div>
+
+                    @if (selectedError.message) {
+                    <div class="detail-row">
+                        <span class="detail-label">Съобщение:</span>
+                        <div class="detail-value message-preview">
+                            {{ selectedError.message }}
+                        </div>
+                    </div>
+                    }
+
+                    @if (selectedError.cost) {
+                    <div class="detail-row">
+                        <span class="detail-label">Очаквана цена:</span>
+                        <span class="detail-value">{{ selectedError.cost.toFixed(2) }} credits</span>
+                    </div>
+                    }
+
+                    <div class="detail-row">
+                        <span class="detail-label">Време:</span>
+                        <span class="detail-value">
+                            {{ selectedError.timestamp | date:'dd.MM.yyyy HH:mm:ss' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button class="btn btn-outline" (click)="closeErrorDetailsModal()" type="button">
+                    Затвори
+                </button>
+
+                @if (lastSendResult && lastSendResult.canRetry) {
+                <button class="btn btn-primary"
+                    (click)="onRetryErrorFromDisplay(convertSMSErrorToErrorLog(selectedError)); closeErrorDetailsModal()"
+                    type="button">
+                    🔄 Опитай отново всички
+                </button>
+                }
+            </div>
+
+        </div>
+    </div>
     }
 </div>

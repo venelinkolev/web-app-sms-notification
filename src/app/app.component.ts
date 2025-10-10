@@ -8,15 +8,18 @@ import { EnvironmentService } from './core/services/environment.service';
 import { NotificationService } from './core/services/notification.service';
 import { DataService } from './core/services/data.service';
 import { SMSService } from './core/services/sms.service';
+import { ErrorLoggerService } from './core/services/error-logger.service';
 
 // Components
 import { FileUploadComponent } from './features/file-upload/file-upload.component';
 import { ClientListComponent } from './features/client-list/client-list.component';
 import { SMSPreviewComponent } from './features/sms-preview/sms-preview.component';
 import { NotificationComponent } from './shared/components/notification/notification.component';
+import { ErrorLogViewerComponent } from './shared/components/error-log-viewer/error-log-viewer.component';
 
 // Models
 import { ClientDataImport, NotificationType } from './core/models';
+import { ErrorContext, ErrorSeverity } from './core/models/error.models';
 
 @Component({
   selector: 'app-root',
@@ -27,7 +30,8 @@ import { ClientDataImport, NotificationType } from './core/models';
     FileUploadComponent,
     ClientListComponent,
     SMSPreviewComponent,
-    NotificationComponent
+    NotificationComponent,
+    ErrorLogViewerComponent,
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -61,11 +65,15 @@ export class AppComponent implements OnInit {
   }
 ]`;
 
+  // Error log viewer toggle
+  showErrorLogViewer = false;
+
   constructor(
     private environmentService: EnvironmentService,
     private notificationService: NotificationService,
     private dataService: DataService,
     private smsService: SMSService,
+    private errorLogger: ErrorLoggerService,
   ) { }
 
   ngOnInit(): void {
@@ -215,5 +223,69 @@ export class AppComponent implements OnInit {
         console.error('❌ SMS Error:', error);
       }
     });
+  }
+
+  /**
+ * Toggle error log viewer
+ */
+  toggleErrorLogViewer(): void {
+    this.showErrorLogViewer = !this.showErrorLogViewer;
+  }
+
+  /**
+   * Create test errors for demonstration (OPTIONAL - for testing only)
+   */
+  createTestErrors(): void {
+    // Test SMS API error
+    this.errorLogger.logSMSError(
+      'Rate limit exceeded',
+      429,
+      {
+        phoneNumber: '+359888123456',
+        timestamp: new Date()
+      }
+    );
+
+    // Test validation error
+    this.errorLogger.logValidationError(
+      'Invalid phone format',
+      'phoneNumber',
+      { value: '123' }
+    );
+
+    // Test file error
+    this.errorLogger.logFileError(
+      'Failed to parse JSON',
+      'clients.json',
+      { size: 1024 }
+    );
+
+    // Test network error
+    this.errorLogger.logNetworkError(
+      { status: 500, message: 'Internal Server Error' },
+      'https://api.example.com/sms',
+      { method: 'POST' }
+    );
+
+    // Test critical error
+    this.errorLogger.logError(
+      new Error('System failure'),
+      ErrorContext.APPLICATION,
+      ErrorSeverity.CRITICAL,
+      { component: 'AppComponent' }
+    );
+
+    this.notificationService.success(
+      'Test грешки създадени',
+      'Създадени са 5 тестови грешки за демонстрация'
+    );
+  }
+
+  /**
+   * Clear test errors
+   */
+  clearTestErrors(): void {
+    this.errorLogger.clearLogs();
+    this.notificationService.info('Грешки изчистени', 'Всички тестови грешки са изтрити');
   }
 }

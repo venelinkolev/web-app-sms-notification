@@ -38,6 +38,43 @@
             </section>
             }
 
+            <!-- Error Log Viewer Section (Testing) -->
+            <section class="error-viewer-section">
+                <div class="error-viewer-toggle">
+                    <button class="btn btn-outline" (click)="toggleErrorLogViewer()">
+                        {{ showErrorLogViewer ? '📋 Скрий' : '📋 Покажи' }} История на грешките
+                    </button>
+
+                    <!-- Test buttons (for development only) -->
+                    @if (!isProduction) {
+                    <div class="test-buttons">
+                        <button class="btn btn-sm btn-outline" (click)="createTestErrors()">
+                            🧪 Създай тестови грешки
+                        </button>
+                        <button class="btn btn-sm btn-outline" (click)="clearTestErrors()">
+                            🗑️ Изчисти грешки
+                        </button>
+                    </div>
+                    }
+                </div>
+
+                @if (showErrorLogViewer) {
+                <div class="error-viewer-container">
+                    <app-error-log-viewer></app-error-log-viewer>
+                </div>
+                }
+            </section>
+
+            <!-- Alternative: Add as a floating button in the bottom-right corner -->
+            <!-- 
+            <div class="floating-error-button" 
+                [class.active]="showErrorLogViewer"
+                (click)="toggleErrorLogViewer()"
+                title="История на грешките">
+            📋
+            </div>
+            -->
+
             <!-- Testing Instructions -->
             @if (!hasData) {
             <section class="testing-instructions card">

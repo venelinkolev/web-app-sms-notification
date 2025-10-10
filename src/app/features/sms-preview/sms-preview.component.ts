@@ -8,6 +8,11 @@ import { SMSTemplateService } from '../../core/services/sms-template.service';
 import { SMSService } from '../../core/services/sms.service';
 import { NotificationService } from '../../core/services/notification.service';
 
+import { ErrorLoggerService } from '../../core/services/error-logger.service';
+import { ErrorDisplayComponent } from '../../shared/components/error-display/error-display.component';
+import { ErrorContext, ErrorSeverity } from '../../core/models/error.models';
+import { BatchOperationResult, BatchSMSMessage, SMSSendResult } from '../../core/models/sms.models';
+
 import {
     ParsedClientRecord,
     SMSTemplate,
@@ -18,7 +23,7 @@ import {
 @Component({
     selector: 'app-sms-preview',
     standalone: true,
-    imports: [CommonModule, FormsModule],
+    imports: [CommonModule, FormsModule, ErrorDisplayComponent],
     templateUrl: './sms-preview.component.html',
     styleUrl: './sms-preview.component.scss'
 })
@@ -58,13 +63,25 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
     isGenerating = false;
     isSending = false;
 
+    // SMS sending results (for error tracking)
+    lastSendResult: BatchOperationResult | null = null;
+    smsErrors: Map<string, SMSSendResult> = new Map(); // clientId -> error result
+
+    // Error display
+    showErrorsSection = false;
+
+    // Error details modal
+    showErrorDetailsModal = false;
+    selectedErrorClientId: string | null = null;
+
     private destroy$ = new Subject<void>();
 
     constructor(
         private dataService: DataService,
         private templateService: SMSTemplateService,
         private smsService: SMSService,
-        private notificationService: NotificationService
+        private notificationService: NotificationService,
+        private errorLogger: ErrorLoggerService
     ) { }
 
     ngOnInit(): void {
@@ -289,6 +306,13 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
                 '⚠️ Изберете телефони за SMS',
                 phoneValidation.errors.join('\n\n')
             );
+
+            // Log validation error
+            this.errorLogger.logValidationError(
+                'Phone selection validation failed',
+                'phoneNumbers',
+                { errors: phoneValidation.errors }
+            );
             return;
         }
 
@@ -313,6 +337,8 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
 
         // Start sending
         this.isSending = true;
+        this.lastSendResult = null;
+        this.smsErrors.clear();
 
         try {
             this.notificationService.info(
@@ -321,33 +347,62 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
                 3000
             );
 
-            // Prepare batch send
-            // TODO: Phase 5 - Implement proper batch sending with progress
-            // For now, just show notification
+            // Prepare batch messages
+            const messages: BatchSMSMessage[] = validSMS.map(sms => ({
+                clientId: sms.clientId,
+                phoneNumber: sms.phoneNumber,
+                message: sms.content,
+                customId: `preview-${sms.clientId}-${Date.now()}`
+            }));
 
+            // Send with tracking (Phase 5 - will be implemented)
+            // For now, this is a placeholder that demonstrates the error handling flow
+
+            console.log('📨 SMS Preview - Prepared for sending:', {
+                totalSMS: messages.length,
+                totalCost: this.stats.totalCost,
+                messages: messages
+            });
+
+            // TODO: Phase 5 - Uncomment when ready
+            /*
+            const result: BatchOperationResult = await this.smsService
+                .sendBatchWithTracking(messages)
+                .toPromise();
+            
+            this.lastSendResult = result;
+            
+            // Process results
+            this.processSendResults(result);
+            */
+
+            // DEMO: Simulate success for now
             this.notificationService.success(
-                'SMS изпратени! (Demo)',
-                `${validSMS.length} съобщения са изпратени успешно!\n` +
-                `(Реално изпращане ще бъде имплементирано в Phase 5 - Send Operations)`,
+                '✅ Demo Mode',
+                `${validSMS.length} SMS готови за изпращане!\n` +
+                `Реалното изпращане ще бъде активирано в Phase 5.`,
                 7000
             );
 
-            console.log('📨 SMS Preview - Ready to send:', {
-                totalSMS: validSMS.length,
-                totalCost: this.stats.totalCost,
-                recipients: validSMS.map(sms => ({
-                    clientId: sms.clientId,
-                    phone: sms.phoneNumber,
-                    content: sms.content,
-                    cost: sms.estimatedCost
-                }))
-            });
-
         } catch (error) {
+            // Log error
+            const errorId = this.errorLogger.logError(
+                error instanceof Error ? error : new Error(String(error)),
+                ErrorContext.SMS_API,
+                ErrorSeverity.HIGH,
+                {
+                    operation: 'sendBatchSMS',
+                    recipientCount: validSMS.length,
+                    totalCost: this.stats.totalCost
+                }
+            );
+
             this.notificationService.error(
                 'Грешка при изпращане',
                 error instanceof Error ? error.message : 'Неизвестна грешка'
             );
+
+            console.error('SMS Send Error:', error);
         } finally {
             this.isSending = false;
         }
@@ -399,5 +454,270 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
         ).join('\n\n');
 
         alert(`Налични placeholders:\n\n${helpText}`);
+    }
+
+    /**
+     * Process batch send results and handle errors
+     */
+    private processSendResults(result: BatchOperationResult): void {
+        // Log successful sends
+        if (result.successful.length > 0) {
+            console.log(`✅ Successfully sent ${result.successful.length} SMS`);
+        }
+
+        // Process failed sends
+        if (result.failed.length > 0) {
+            this.showErrorsSection = true;
+
+            // Store errors for display
+            result.failed.forEach(failedSms => {
+                this.smsErrors.set(failedSms.clientId, failedSms);
+
+                // Log each error
+                this.errorLogger.logSMSError(
+                    failedSms.error || 'Unknown error',
+                    failedSms.errorCode,
+                    {
+                        clientId: failedSms.clientId,
+                        phoneNumber: failedSms.phoneNumber,
+                        timestamp: failedSms.timestamp
+                    }
+                );
+            });
+
+            // Show notification
+            this.notificationService.warning(
+                `⚠️ ${result.failed.length} грешки при изпращане`,
+                `${result.successful.length} успешни, ${result.failed.length} неуспешни`
+            );
+        }
+
+        // Process invalid numbers
+        if (result.invalid.length > 0) {
+            result.invalid.forEach(invalid => {
+                this.errorLogger.logValidationError(
+                    invalid.reason,
+                    'phoneNumber',
+                    {
+                        clientId: invalid.clientId,
+                        phoneNumber: invalid.phoneNumber
+                    }
+                );
+            });
+        }
+
+        // Show final statistics
+        this.notificationService.info(
+            'Резултат от изпращане',
+            `✅ Успешни: ${result.stats.successfulCount}\n` +
+            `❌ Неуспешни: ${result.stats.failedCount}\n` +
+            `⚠️ Невалидни: ${result.stats.invalidCount}\n` +
+            `💰 Обща цена: ${result.stats.totalCost.toFixed(2)} credits`
+        );
+
+        // Offer retry if possible
+        if (result.canRetry) {
+            this.offerRetry(result);
+        }
+    }
+
+    /**
+     * Offer retry for failed messages
+     */
+    private offerRetry(result: BatchOperationResult): void {
+        const retryConfirm = confirm(
+            `Има ${result.retryableMessages.length} съобщения, които могат да бъдат опитани отново.\n\n` +
+            `Искате ли да опитате отново?`
+        );
+
+        if (retryConfirm) {
+            this.retrySending(result);
+        }
+    }
+
+    /**
+  * Retry failed messages
+  * Made public for template access
+  */
+    async retrySending(previousResult: BatchOperationResult): Promise<void> {
+        this.isSending = true;
+
+        try {
+            this.notificationService.info(
+                'Retry започна',
+                `Опитвам отново ${previousResult.retryableMessages.length} съобщения...`
+            );
+
+            // TODO: Phase 5 - Implement retry
+            /*
+            const retryResult: BatchOperationResult = await this.smsService
+                .retryFailedMessages(previousResult)
+                .toPromise();
+            
+            this.processSendResults(retryResult);
+            */
+
+            console.log('🔄 Retry would be triggered for:', previousResult.retryableMessages);
+
+        } catch (error) {
+            this.errorLogger.logError(
+                error instanceof Error ? error : new Error(String(error)),
+                ErrorContext.SMS_API,
+                ErrorSeverity.HIGH,
+                { operation: 'retrySMS' }
+            );
+
+            this.notificationService.error(
+                'Грешка при retry',
+                error instanceof Error ? error.message : 'Неизвестна грешка'
+            );
+        } finally {
+            this.isSending = false;
+        }
+    }
+
+    /**
+     * Check if SMS has error
+     */
+    hasSMSError(clientId: string): boolean {
+        return this.smsErrors.has(clientId);
+    }
+
+    /**
+     * Get SMS error
+     */
+    getSMSError(clientId: string): SMSSendResult | undefined {
+        return this.smsErrors.get(clientId);
+    }
+
+    /**
+     * Clear all errors
+     */
+    clearErrors(): void {
+        this.smsErrors.clear();
+        this.showErrorsSection = false;
+        this.lastSendResult = null;
+    }
+
+    /**
+     * Get errors count
+     */
+    get errorsCount(): number {
+        return this.smsErrors.size;
+    }
+
+    /**
+ * Show error details modal for specific SMS
+ */
+    showErrorDetails(clientId: string): void {
+        const error = this.getSMSError(clientId);
+        if (!error) {
+            console.warn('No error found for client:', clientId);
+            return;
+        }
+
+        this.selectedErrorClientId = clientId;
+        this.showErrorDetailsModal = true;
+
+        console.log('Showing error details for:', clientId, error);
+    }
+
+    /**
+     * Close error details modal
+     */
+    closeErrorDetailsModal(): void {
+        this.showErrorDetailsModal = false;
+        this.selectedErrorClientId = null;
+    }
+
+    /**
+     * Get selected error for modal display
+     */
+    get selectedError(): SMSSendResult | undefined {
+        if (!this.selectedErrorClientId) return undefined;
+        return this.getSMSError(this.selectedErrorClientId);
+    }
+
+    /**
+     * Convert SMS error to ErrorLog format for ErrorDisplayComponent
+     */
+    convertSMSErrorToErrorLog(smsError: SMSSendResult): any {
+        // Import ErrorLog type if needed
+        return {
+            id: `sms-error-${smsError.clientId}-${smsError.timestamp.getTime()}`,
+            timestamp: smsError.timestamp,
+            severity: this.getSMSErrorSeverity(smsError.errorCode),
+            context: 'SMS_API' as any, // ErrorContext.SMS_API
+            message: smsError.error || 'Неизвестна грешка',
+            code: smsError.errorCode,
+            technicalDetails: JSON.stringify({
+                clientId: smsError.clientId,
+                phoneNumber: smsError.phoneNumber,
+                message: smsError.message,
+                cost: smsError.cost,
+                timestamp: smsError.timestamp
+            }, null, 2),
+            metadata: {
+                clientId: smsError.clientId,
+                phoneNumber: smsError.phoneNumber
+            },
+            resolved: false
+        };
+    }
+
+    /**
+     * Get error severity from error code (helper)
+     */
+    private getSMSErrorSeverity(errorCode: number | undefined): any {
+        if (!errorCode) return 'MEDIUM'; // ErrorSeverity.MEDIUM
+
+        // Critical errors
+        if ([104, 1001].includes(errorCode)) return 'CRITICAL'; // ErrorSeverity.CRITICAL
+
+        // High severity errors
+        if ([11, 103, 105].includes(errorCode)) return 'HIGH'; // ErrorSeverity.HIGH
+
+        // Medium severity errors
+        if ([13, 14, 15, 201, 202, 429].includes(errorCode)) return 'MEDIUM'; // ErrorSeverity.MEDIUM
+
+        return 'MEDIUM'; // Default
+    }
+
+    /**
+     * Handle retry from error display
+     */
+    onRetryErrorFromDisplay(errorLog: any): void {
+        if (!this.lastSendResult) {
+            this.notificationService.warning(
+                'Няма резултат',
+                'Няма запазен резултат от предишно изпращане'
+            );
+            return;
+        }
+
+        this.closeErrorDetailsModal();
+        this.retrySending(this.lastSendResult);
+    }
+
+    /**
+     * Handle resolve from error display
+     */
+    onResolveErrorFromDisplay(errorId: string): void {
+        // Mark error as resolved in local tracking
+        if (this.selectedErrorClientId) {
+            this.smsErrors.delete(this.selectedErrorClientId);
+
+            this.notificationService.success(
+                'Грешка маркирана',
+                'Грешката е маркирана като решена'
+            );
+        }
+
+        this.closeErrorDetailsModal();
+
+        // Update error count
+        if (this.smsErrors.size === 0) {
+            this.showErrorsSection = false;
+        }
     }
 }

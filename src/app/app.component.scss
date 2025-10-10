@@ -335,6 +335,95 @@
   color: var(--success-color);
 }
 
+// Error Viewer Section
+.error-viewer-section {
+  margin-bottom: var(--spacing-xl);
+  animation: slideInUp 0.6s ease-out;
+  
+  .error-viewer-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--background-card);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    flex-wrap: wrap;
+    gap: var(--spacing-md);
+    
+    .test-buttons {
+      display: flex;
+      gap: var(--spacing-sm);
+      flex-wrap: wrap;
+    }
+  }
+  
+  .error-viewer-container {
+    animation: slideInUp 0.4s ease-out;
+  }
+}
+
+// Floating Error Button (alternative UI)
+.floating-error-button {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  right: var(--spacing-lg);
+  width: 56px;
+  height: 56px;
+  background: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  box-shadow: var(--shadow-lg);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 24px rgba(33, 150, 243, 0.4);
+  }
+  
+  &.active {
+    background: var(--error-color);
+    transform: rotate(180deg);
+    
+    &:hover {
+      transform: rotate(180deg) scale(1.1);
+    }
+  }
+  
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    bottom: var(--spacing-md);
+    right: var(--spacing-md);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .error-viewer-section {
+    .error-viewer-toggle {
+      flex-direction: column;
+      align-items: stretch;
+      
+      .test-buttons {
+        width: 100%;
+        
+        button {
+          flex: 1;
+        }
+      }
+    }
+  }
+}
+
 // Animation for new sections
 @keyframes slideInUp {
   from {
