@@ -1,0 +1,316 @@
+<div class="send-results-container">
+
+    <!-- No Results State -->
+    @if (!hasResults) {
+    <div class="no-results-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text">Няма резултати от изпращане</div>
+        <p>След като изпратите SMS съобщения, тук ще видите детайлни резултати</p>
+    </div>
+    }
+
+    <!-- Results Available -->
+    @if (hasResults && result) {
+    <div class="results-content">
+
+        <!-- Results Header -->
+        <div class="results-header">
+            <div class="header-left">
+                <span class="status-icon">{{ getStatusIcon() }}</span>
+                <h2>Резултати от изпращане</h2>
+            </div>
+            <div class="header-right">
+                <span class="status-badge" [ngClass]="getStatusClass()">
+                    {{ getStatusText() }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Summary Statistics Panel -->
+        <!-- Task 5.3.2: Enhanced with Visual Indicators -->
+        <div class="summary-panel card">
+            <h3>📈 Обща статистика</h3>
+
+            <div class="summary-layout">
+                <!-- Left: Stats Grid -->
+                <div class="stats-grid">
+                    <!-- Total Messages Card -->
+                    <div class="stat-card total">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-value">{{ result.stats.totalAttempted }}</div>
+                        <div class="stat-label">Общо опити</div>
+                    </div>
+
+                    <!-- Successful Card -->
+                    <div class="stat-card success">
+                        <div class="stat-icon">✅</div>
+                        <div class="stat-value">{{ result.stats.successfulCount }}</div>
+                        <div class="stat-label">Успешни</div>
+                    </div>
+
+                    <!-- Failed Card -->
+                    <div class="stat-card failed">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-value">{{ result.stats.failedCount }}</div>
+                        <div class="stat-label">Неуспешни</div>
+                    </div>
+
+                    <!-- Invalid Card -->
+                    @if (result.stats.invalidCount > 0) {
+                    <div class="stat-card invalid">
+                        <div class="stat-icon">⚠️</div>
+                        <div class="stat-value">{{ result.stats.invalidCount }}</div>
+                        <div class="stat-label">Невалидни</div>
+                    </div>
+                    }
+                </div>
+
+                <!-- Right: Visual Success Rate Indicator -->
+                <div class="success-rate-visual">
+                    <div class="circular-progress" [ngClass]="getSuccessRateColorClass()">
+                        <svg viewBox="0 0 100 100">
+                            <!-- Background circle -->
+                            <circle cx="50" cy="50" r="40" class="progress-bg" />
+                            <!-- Progress circle -->
+                            <circle cx="50" cy="50" r="40" class="progress-fill"
+                                [style.stroke-dasharray]="getCircleProgressPath(getSuccessRatePercentage())" />
+                        </svg>
+                        <div class="progress-text">
+                            <div class="rate-value">{{ getSuccessRatePercentage() }}%</div>
+                            <div class="rate-label">Успеваемост</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cost and Metadata -->
+            <div class="summary-details">
+                <div class="detail-row">
+                    <span class="detail-label">💰 Обща цена:</span>
+                    <span class="detail-value">{{ formatCost(result.stats.totalCost) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">📊 Средна цена/SMS:</span>
+                    <span class="detail-value">{{ formatCost(getAverageCost()) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">⏱️ Продължителност:</span>
+                    <span class="detail-value">{{ formatDuration(result.metadata.duration) }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">🕐 Време на изпращане:</span>
+                    <span class="detail-value">{{ formatTimestamp(result.metadata.startTime) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search Section -->
+        <!-- Task 5.3.3: Enhanced Filtering -->
+        <div class="filters-section card">
+            <div class="filters-header">
+                <h3>🔍 Филтриране и търсене</h3>
+                @if (searchText || filterStatus !== 'all') {
+                <button class="btn btn-sm btn-outline" (click)="clearFilters()" type="button">
+                    ✕ Изчисти филтрите
+                </button>
+                }
+            </div>
+
+            <div class="filters-controls">
+                <!-- Status Filter -->
+                <div class="filter-group">
+                    <label>Статус</label>
+                    <select class="form-control" [(ngModel)]="filterStatus" (change)="onFilterStatusChange()">
+                        <option value="all">Всички ({{ successfulList.length + failedList.length }})</option>
+                        <option value="success">Само успешни ({{ successfulList.length }})</option>
+                        <option value="failed">Само неуспешни ({{ failedList.length }})</option>
+                    </select>
+                </div>
+
+                <!-- Search -->
+                <div class="filter-group search-group">
+                    <label>Търсене</label>
+                    <input type="text" class="form-control" placeholder="Търси по клиент, телефон или грешка..."
+                        [(ngModel)]="searchText" (ngModelChange)="onSearchChange()">
+                    @if (searchText) {
+                    <button class="clear-search-btn" (click)="searchText = ''; onSearchChange()" type="button">
+                        ✕
+                    </button>
+                    }
+                </div>
+
+                <!-- Sort Controls -->
+                <div class="filter-group">
+                    <label>Сортиране</label>
+                    <div class="sort-buttons">
+                        <button class="btn btn-sm" [class.active]="sortField === 'client'"
+                            (click)="onSortChange('client')" type="button"
+                            [title]="'Сортирай по клиент ' + (sortField === 'client' ? (sortDirection === 'asc' ? '(възходящо)' : '(низходящо)') : '')">
+                            По клиент {{ sortField === 'client' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                        </button>
+                        <button class="btn btn-sm" [class.active]="sortField === 'phone'"
+                            (click)="onSortChange('phone')" type="button"
+                            [title]="'Сортирай по телефон ' + (sortField === 'phone' ? (sortDirection === 'asc' ? '(възходящо)' : '(низходящо)') : '')">
+                            По телефон {{ sortField === 'phone' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                        </button>
+                        @if (failedList.length > 0) {
+                        <button class="btn btn-sm" [class.active]="sortField === 'error'"
+                            (click)="onSortChange('error')" type="button"
+                            [title]="'Сортирай по грешка ' + (sortField === 'error' ? (sortDirection === 'asc' ? '(възходящо)' : '(низходящо)') : '')">
+                            По грешка {{ sortField === 'error' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                        </button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results count -->
+            <div class="results-count">
+                Показани: <strong>{{ (filterStatus === 'all' ? filteredSuccessList.length + filteredFailedList.length :
+                    filterStatus === 'success' ? filteredSuccessList.length : filteredFailedList.length) }}</strong> от
+                <strong>{{ successfulList.length + failedList.length }}</strong> резултата
+            </div>
+        </div>
+
+        <!-- Success List Section -->
+        <!-- Task 5.3.3: Enhanced with Better Filtering -->
+        @if (successfulList.length > 0 && (filterStatus === 'all' || filterStatus === 'success')) {
+        <div class="list-section card success-section">
+            <div class="list-header" (click)="toggleSuccessList()">
+                <h3>
+                    <span class="toggle-icon">{{ showSuccessList ? '▼' : '▶' }}</span>
+                    ✅ Успешно изпратени
+                    <span class="count-badge success-badge">{{ filteredSuccessList.length }}</span>
+                </h3>
+            </div>
+
+            @if (showSuccessList) {
+            <div class="list-content" [@listAnimation]>
+                @for (item of filteredSuccessList; track item.phoneNumber; let idx = $index) {
+                <div class="list-item success-item" [@itemAnimation]="idx">
+                    <div class="item-info">
+                        <div class="item-client">
+                            <span class="client-icon">👤</span>
+                            {{ item.clientId }}
+                        </div>
+                        <div class="item-phone">📱 {{ item.phoneNumber }}</div>
+                        @if (item.cost) {
+                        <div class="item-cost">💰 {{ item.cost.toFixed(2) }} BGN</div>
+                        }
+                    </div>
+                    <div class="item-timestamp">
+                        <span class="time-icon">🕐</span>
+                        {{ formatTimestamp(item.timestamp) }}
+                    </div>
+                </div>
+                } @empty {
+                <div class="empty-list">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-text">Няма намерени успешни съобщения</div>
+                </div>
+                }
+            </div>
+            }
+        </div>
+        }
+
+        <!-- Failed List Section -->
+        <!-- Task 5.3.3: Enhanced with Better Filtering and Error Display -->
+        @if (failedList.length > 0 && (filterStatus === 'all' || filterStatus === 'failed')) {
+        <div class="list-section card failed-section">
+            <div class="list-header" (click)="toggleFailedList()">
+                <h3>
+                    <span class="toggle-icon">{{ showFailedList ? '▼' : '▶' }}</span>
+                    ❌ Неуспешно изпратени
+                    <span class="count-badge failed-badge">{{ filteredFailedList.length }}</span>
+                </h3>
+                @if (canRetry() && showFailedList) {
+                <button class="btn btn-outline btn-sm retry-all-btn"
+                    (click)="retryAllFailed(); $event.stopPropagation()" type="button">
+                    🔄 Опитай отново всички
+                    <span class="retry-count">({{ getRetryableCount() }})</span>
+                </button>
+                }
+            </div>
+
+            @if (showFailedList) {
+            <div class="list-content" [@listAnimation]>
+                @for (item of filteredFailedList; track item.phoneNumber; let idx = $index) {
+                <div class="list-item failed-item" [@itemAnimation]="idx">
+                    <div class="item-info">
+                        <div class="item-client">
+                            <span class="client-icon">👤</span>
+                            {{ item.clientId }}
+                        </div>
+                        <div class="item-phone">📱 {{ item.phoneNumber }}</div>
+                        @if (item.error) {
+                        <div class="item-error">
+                            <span class="error-icon">⚠️</span>
+                            {{ item.error }}
+                            @if (item.errorCode) {
+                            <span class="error-code">(Код: {{ item.errorCode }})</span>
+                            }
+                        </div>
+                        }
+                    </div>
+                    <div class="item-actions">
+                        <div class="item-timestamp">
+                            <span class="time-icon">🕐</span>
+                            {{ formatTimestamp(item.timestamp) }}
+                        </div>
+                        @if (item.errorCode && canRetry()) {
+                        <button class="btn btn-sm btn-outline retry-btn" (click)="retryIndividual(item)" type="button">
+                            🔄 Retry
+                        </button>
+                        }
+                    </div>
+                </div>
+                } @empty {
+                <div class="empty-list">
+                    <div class="empty-icon">🔍</div>
+                    <div class="empty-text">Няма намерени неуспешни съобщения</div>
+                </div>
+                }
+            </div>
+            }
+        </div>
+        }
+
+        <!-- Invalid Numbers Section -->
+        @if (invalidList.length > 0) {
+        <div class="list-section card">
+            <div class="list-header">
+                <h3>⚠️ Невалидни номера ({{ invalidList.length }})</h3>
+            </div>
+            <div class="list-content">
+                @for (item of invalidList; track item.phoneNumber) {
+                <div class="list-item invalid-item">
+                    <div class="item-info">
+                        <div class="item-client">{{ item.clientId }}</div>
+                        <div class="item-phone">📱 {{ item.phoneNumber }}</div>
+                        <div class="item-reason">{{ item.reason }}</div>
+                    </div>
+                </div>
+                }
+            </div>
+        </div>
+        }
+
+        <!-- Export Actions -->
+        <!-- Task 5.3.5: Will be implemented -->
+        <div class="export-section card">
+            <h3>📥 Експорт на резултати</h3>
+            <div class="export-actions">
+                <button class="btn btn-outline" (click)="exportToCSV()" type="button">
+                    📄 Експорт CSV
+                </button>
+                <button class="btn btn-outline" (click)="exportToJSON()" type="button">
+                    📋 Експорт JSON
+                </button>
+            </div>
+        </div>
+
+    </div>
+    }
+
+</div>

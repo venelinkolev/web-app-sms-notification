@@ -9,3 +9,6 @@ export { SMSPreviewComponent } from './sms-preview/sms-preview.component';
 
 // Send Progress Feature
 export { SendProgressComponent } from './send-progress/send-progress.component';
+
+// Send Results Feature
+export { SendResultsComponent } from './send-results/send-results.component';
