@@ -21,86 +21,134 @@
         </div>
 
         <!-- Progress Bar Section -->
-        <!-- Will be implemented in Task 5.2.2 -->
+        <!-- Task 5.2.2: Enhanced Animated Progress Bar -->
         <div class="progress-bar-section">
             <div class="progress-bar-wrapper">
+
+                <!-- Progress track with animated fill -->
                 <div class="progress-bar-track">
-                    <div class="progress-bar-fill" [class]="getStatusClass()" [style.width.%]="progress.percentage">
+                    <div class="progress-bar-fill" [class]="getStatusClass()" [style.width.%]="progress.percentage"
+                        [attr.aria-valuenow]="progress.percentage" [attr.aria-valuemin]="0" [attr.aria-valuemax]="100"
+                        role="progressbar">
+
+                        <!-- Inner glow for active states -->
+                        @if (progress.status === SendStatus.SENDING) {
+                        <div class="progress-glow"></div>
+                        }
                     </div>
                 </div>
-                <div class="progress-percentage">
-                    {{ progress.percentage }}%
+
+                <!-- Percentage display with enhanced styling -->
+                <div class="progress-percentage" [class]="getStatusClass()">
+                    <strong>{{ progress.percentage }}%</strong>
+
+                    <!-- Status text inline with percentage for completed states -->
+                    @if (progress.status === SendStatus.COMPLETED) {
+                    <span class="completion-badge">✓ Завършено</span>
+                    }
+                    @if (progress.status === SendStatus.CANCELLED) {
+                    <span class="cancelled-badge">✗ Отменено</span>
+                    }
+                    @if (progress.status === SendStatus.FAILED) {
+                    <span class="failed-badge">⚠ Грешка</span>
+                    }
                 </div>
+
             </div>
         </div>
 
         <!-- Live Statistics Panel -->
-        <!-- Will be implemented in Task 5.2.3 -->
+        <!-- Task 5.2.3: Enhanced Statistics Display -->
         <div class="statistics-panel">
-            <div class="stat-row">
+
+            <!-- Progress Counter (Main stat) -->
+            <div class="stat-row stat-progress">
                 <span class="stat-label">📊 Прогрес:</span>
-                <span class="stat-value">{{ progress.current }} / {{ progress.total }} SMS</span>
+                <span class="stat-value">
+                    {{ progress.current }} / {{ progress.total }} SMS
+                </span>
             </div>
 
-            <div class="stat-row">
+            <!-- Success Count -->
+            <div class="stat-row stat-success">
                 <span class="stat-label">✅ Успешни:</span>
-                <span class="stat-value text-success">{{ progress.successful }}</span>
+                <span class="stat-value">{{ progress.successful }}</span>
             </div>
 
-            <div class="stat-row">
+            <!-- Failed Count -->
+            <div class="stat-row stat-failed">
                 <span class="stat-label">❌ Неуспешни:</span>
-                <span class="stat-value text-error">{{ progress.failed }}</span>
+                <span class="stat-value">{{ progress.failed }}</span>
             </div>
 
-            @if (progress.estimatedTimeRemaining) {
-            <div class="stat-row">
+            <!-- Estimated Time Remaining -->
+            @if (progress.estimatedTimeRemaining && progress.estimatedTimeRemaining > 0) {
+            <div class="stat-row stat-time">
                 <span class="stat-label">⏱️ Оставащо време:</span>
-                <span class="stat-value">{{ formatTime(progress.estimatedTimeRemaining) }}</span>
+                <span class="stat-value" [class.time-low]="progress.estimatedTimeRemaining < 10000">
+                    {{ formatTime(progress.estimatedTimeRemaining) }}
+                </span>
             </div>
             }
 
-            <div class="stat-row">
+            <!-- Total Cost -->
+            <div class="stat-row stat-cost">
                 <span class="stat-label">💰 Обща цена:</span>
                 <span class="stat-value">{{ formatCost(progress.totalCost) }}</span>
             </div>
 
-            @if (progress.sendingSpeed) {
-            <div class="stat-row">
+            <!-- Sending Speed (only when active) -->
+            @if (progress.sendingSpeed && progress.sendingSpeed > 0) {
+            <div class="stat-row stat-speed">
                 <span class="stat-label">⚡ Скорост:</span>
                 <span class="stat-value">{{ progress.sendingSpeed }} SMS/sec</span>
             </div>
             }
 
+            <!-- Current Status Message -->
             @if (progress.currentMessage) {
             <div class="stat-row current-message">
                 <span class="stat-label">ℹ️ Статус:</span>
                 <span class="stat-value">{{ progress.currentMessage }}</span>
             </div>
             }
+
+            <!-- Operation Start Time (only when active) -->
+            @if (progress.startTime && isActive) {
+            <div class="stat-row">
+                <span class="stat-label">🕐 Започнато:</span>
+                <span class="stat-value">{{ formatDateTime(progress.startTime) }}</span>
+            </div>
+            }
+
         </div>
 
         <!-- Control Buttons -->
-        <!-- Will be implemented in Task 5.2.4 -->
+        <!-- Task 5.2.4: Enhanced Controls with Keyboard Shortcuts -->
         <div class="control-buttons">
 
             <!-- Pause Button (when sending) -->
             @if (canPause) {
-            <button class="btn btn-warning" (click)="onPause()" [disabled]="!canPause">
-                ⏸️ Пауза
+            <button class="btn btn-warning" (click)="onPause()" [disabled]="!canPause" title="Keyboard: Space">
+                <span class="btn-icon">⏸️</span>
+                <span class="btn-text">Пауза</span>
             </button>
             }
 
             <!-- Resume Button (when paused) -->
             @if (canResume) {
-            <button class="btn btn-primary" (click)="onResume()" [disabled]="!canResume">
-                ▶️ Продължи
+            <button class="btn btn-primary" (click)="onResume()" [disabled]="!canResume" title="Keyboard: Space">
+                <span class="btn-icon">▶️</span>
+                <span class="btn-text">Продължи</span>
             </button>
             }
 
             <!-- Cancel Button (when active) -->
             @if (canCancel) {
-            <button class="btn btn-outline btn-danger" (click)="onCancel()" [disabled]="!canCancel">
-                ❌ Отмени
+            <button class="btn btn-outline btn-danger" (click)="onCancel()" [disabled]="!canCancel"
+                title="Keyboard: Escape">
+                <span class="btn-icon">❌</span>
+                <span class="btn-text">Отмени</span>
             </button>
             }
 
@@ -108,16 +156,31 @@
             @if (progress.status === SendStatus.COMPLETED ||
             progress.status === SendStatus.CANCELLED ||
             progress.status === SendStatus.FAILED) {
-            <button class="btn btn-outline" (click)="onClose()">
-                ✖️ Затвори
+            <button class="btn btn-outline" (click)="onClose()" title="Close and reset">
+                <span class="btn-icon">✖️</span>
+                <span class="btn-text">Затвори</span>
             </button>
             }
         </div>
 
-        <!-- Keyboard Shortcuts Hint (optional) -->
+        <!-- Keyboard Shortcuts Hint (enhanced) -->
         @if (isActive) {
         <div class="keyboard-hints">
-            <small>💡 Клавиши: Space - Пауза/Продължи | Esc - Отмени</small>
+            <div class="hint-title">⌨️ Клавишни комбинации:</div>
+            <div class="hint-items">
+                @if (canPause || canResume) {
+                <span class="hint-item">
+                    <kbd>Space</kbd>
+                    {{ canPause ? 'Пауза' : 'Продължи' }}
+                </span>
+                }
+                @if (canCancel) {
+                <span class="hint-item">
+                    <kbd>Esc</kbd>
+                    Отмени
+                </span>
+                }
+            </div>
         </div>
         }
 

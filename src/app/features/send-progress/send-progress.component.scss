@@ -105,7 +105,7 @@
 }
 
 // ==================== Progress Bar Section ====================
-// Basic structure - animations will be added in Task 5.2.2
+// Task 5.2.2: Animated Progress Bar with Gradients
 
 .progress-bar-section {
   margin-bottom: var(--spacing-lg);
@@ -117,112 +117,590 @@
 
 .progress-bar-track {
   width: 100%;
-  height: 24px;
-  background: var(--background-hover);
+  height: 28px;
+  background: linear-gradient(to right, var(--background-hover), #e8e8e8);
   border-radius: var(--border-radius-md);
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
 }
 
 .progress-bar-fill {
   height: 100%;
-  transition: width 0.3s ease-in-out;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  border-radius: var(--border-radius-md);
 
-  // Status-based colors (basic - will enhance in 5.2.2)
+  // Animated shine effect overlay
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent
+    );
+    animation: shine 2s infinite;
+  }
+
+  // Status-based gradients and animations
   &.status-preparing {
-    background: var(--primary-light);
+    background: linear-gradient(90deg, var(--primary-light), var(--primary-color));
+    animation: pulse-preparing 1.5s ease-in-out infinite;
   }
 
   &.status-sending {
-    background: var(--primary-color);
+    background: linear-gradient(90deg, #2196F3, #1976D2, #0D47A1);
+    background-size: 200% 100%;
+    animation: pulse-sending 1.5s ease-in-out infinite, gradient-shift 3s ease infinite;
   }
 
   &.status-paused {
-    background: var(--warning-color);
+    background: linear-gradient(90deg, var(--warning-color), #F57C00);
+    animation: pulse-paused 2s ease-in-out infinite;
   }
 
   &.status-completed {
-    background: var(--success-color);
+    background: linear-gradient(90deg, var(--success-color), #388E3C);
+    animation: success-flash 0.6s ease;
   }
 
-  &.status-cancelled,
+  &.status-cancelled {
+    background: linear-gradient(90deg, var(--error-color), #C62828);
+    opacity: 0.7;
+  }
+
   &.status-failed {
-    background: var(--error-color);
+    background: linear-gradient(90deg, var(--error-color), #B71C1C);
+    animation: error-shake 0.5s ease;
   }
 }
 
 .progress-percentage {
   text-align: center;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-size: var(--font-size-md);
+  font-weight: 700;
   color: var(--text-primary);
-  margin-top: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
+  transition: all 0.3s ease;
+
+  // Add color coding to percentage text
+  .status-sending & {
+    color: var(--primary-dark);
+  }
+
+  .status-paused & {
+    color: var(--warning-color);
+  }
+
+  .status-completed & {
+    color: var(--success-color);
+  }
+
+  .status-cancelled &,
+  .status-failed & {
+    color: var(--error-color);
+  }
+}
+
+// ==================== Progress Bar Animations ====================
+
+// Inner glow effect for active sending
+.progress-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at center,
+    rgba(255, 255, 255, 0.4),
+    transparent 70%
+  );
+  animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+// Completion/Status badges in percentage area
+.completion-badge,
+.cancelled-badge,
+.failed-badge {
+  display: inline-block;
+  margin-left: var(--spacing-sm);
+  padding: 2px var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  animation: badge-appear 0.3s ease;
+}
+
+.completion-badge {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--success-color);
+}
+
+.cancelled-badge {
+  background: rgba(244, 67, 54, 0.2);
+  color: var(--error-color);
+}
+
+.failed-badge {
+  background: rgba(244, 67, 54, 0.2);
+  color: var(--error-color);
+}
+
+@keyframes badge-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Shine effect animation
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+// Gradient shift for sending state
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+// Pulse animation for preparing state
+@keyframes pulse-preparing {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.01);
+  }
+}
+
+// Pulse animation for sending state
+@keyframes pulse-sending {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 8px 2px rgba(33, 150, 243, 0.6);
+  }
+}
+
+// Pulse animation for paused state
+@keyframes pulse-paused {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+// Success flash animation
+@keyframes success-flash {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 0 12px 4px rgba(76, 175, 80, 0.6);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// Error shake animation
+@keyframes error-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-4px);
+  }
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 // ==================== Statistics Panel ====================
-// Basic layout - will be enhanced in Task 5.2.3
+// Task 5.2.3: Enhanced Live Statistics Display
 
 .statistics-panel {
-  background: var(--background-hover);
-  border-radius: var(--border-radius-sm);
-  padding: var(--spacing-md);
+  background: linear-gradient(135deg, var(--background-card), var(--background-hover));
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-lg);
   margin-bottom: var(--spacing-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .stat-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-xs) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  border-radius: var(--border-radius-sm);
+  transition: all 0.2s ease;
   
+  &:hover {
+    background: rgba(255, 255, 255, 0.5);
+    transform: translateX(2px);
+  }
+
   &:not(:last-child) {
-    border-bottom: 1px solid var(--divider-color);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   .stat-label {
-    font-size: var(--font-size-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-md);
     color: var(--text-secondary);
     font-weight: 500;
+
+    // Icon styling (emoji will be larger and more visible)
+    &::before {
+      font-size: var(--font-size-lg);
+      line-height: 1;
+    }
   }
 
   .stat-value {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-md);
     color: var(--text-primary);
-    font-weight: 600;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-variant-numeric: tabular-nums; // Monospaced numbers for better alignment
+    transition: all 0.3s ease;
+    
+    // Animated number changes (optional enhancement)
+    &.value-updated {
+      animation: value-pop 0.3s ease;
+    }
+  }
+
+  // Status-specific value styling
+  &.stat-progress {
+    .stat-value {
+      color: var(--primary-dark);
+      font-size: var(--font-size-lg);
+    }
+  }
+
+  &.stat-success {
+    .stat-value {
+      color: var(--success-color);
+      text-shadow: 0 0 8px rgba(76, 175, 80, 0.3);
+    }
+  }
+
+  &.stat-failed {
+    .stat-value {
+      color: var(--error-color);
+      text-shadow: 0 0 8px rgba(244, 67, 54, 0.3);
+    }
+  }
+
+  &.stat-cost {
+    background: linear-gradient(to right, rgba(255, 193, 7, 0.1), transparent);
+    border-left: 3px solid #FFC107;
+    
+    .stat-value {
+      color: #F57C00;
+      font-size: var(--font-size-lg);
+    }
+  }
+
+  &.stat-speed {
+    .stat-value {
+      color: var(--info-color);
+      
+      // Add pulse effect for speed indicator
+      animation: speed-pulse 2s ease-in-out infinite;
+    }
   }
 
   &.current-message {
+    background: rgba(33, 150, 243, 0.08);
+    border-left: 3px solid var(--primary-color);
+    padding: var(--spacing-md);
+    
     .stat-value {
       color: var(--primary-color);
       font-style: italic;
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  &.stat-time {
+    .stat-value {
+      color: var(--warning-color);
+      
+      // Countdown animation when time is low
+      &.time-low {
+        animation: time-warning 1s ease-in-out infinite;
+      }
     }
   }
 }
 
+// ==================== Statistics Animations ====================
+
+// Value pop animation when number updates
+@keyframes value-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+// Speed pulse animation
+@keyframes speed-pulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 8px rgba(33, 150, 243, 0.4);
+  }
+}
+
+// Time warning animation for low remaining time
+@keyframes time-warning {
+  0%, 100% {
+    color: var(--warning-color);
+  }
+  50% {
+    color: var(--error-color);
+    text-shadow: 0 0 8px rgba(244, 67, 54, 0.4);
+  }
+}
+
+// Stats panel fade-in on load
+.statistics-panel {
+  animation: stats-fade-in 0.4s ease;
+}
+
+@keyframes stats-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 // ==================== Control Buttons ====================
-// Basic structure - will be enhanced in Task 5.2.4
+// Task 5.2.4: Enhanced Button Styling & Interactions
 
 .control-buttons {
   display: flex;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   justify-content: center;
   flex-wrap: wrap;
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--divider-color);
+  padding-top: var(--spacing-lg);
+  margin-top: var(--spacing-md);
+  border-top: 2px solid var(--divider-color);
 
   .btn {
-    min-width: 120px;
+    min-width: 140px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    font-size: var(--font-size-md);
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+
+    // Ripple effect base
+    &::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    &:active:not(:disabled)::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    // Disabled state
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    // Hover effects (not disabled)
+    &:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
   }
 
+  // Pause Button (Warning style)
+  .btn-warning {
+    background: linear-gradient(135deg, var(--warning-color), #F57C00);
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, #F57C00, #E65100);
+      box-shadow: 0 4px 16px rgba(255, 152, 0, 0.4);
+    }
+
+    &:active:not(:disabled) {
+      background: #E65100;
+    }
+  }
+
+  // Resume Button (Primary style)
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    color: white;
+    border: none;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+
+    &:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--primary-dark), #0D47A1);
+      box-shadow: 0 4px 16px rgba(33, 150, 243, 0.4);
+    }
+
+    &:active:not(:disabled) {
+      background: #0D47A1;
+    }
+  }
+
+  // Cancel Button (Danger outline style)
   .btn-danger {
+    background: transparent;
     color: var(--error-color);
-    border-color: var(--error-color);
+    border: 2px solid var(--error-color);
+    box-shadow: none;
 
     &:hover:not(:disabled) {
       background: var(--error-color);
       color: white;
+      box-shadow: 0 4px 16px rgba(244, 67, 54, 0.3);
     }
+
+    &:active:not(:disabled) {
+      background: #C62828;
+      border-color: #C62828;
+    }
+  }
+
+  // Close Button (Neutral outline)
+  .btn-outline {
+    background: transparent;
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    box-shadow: none;
+
+    &:hover:not(:disabled) {
+      background: var(--background-hover);
+      border-color: var(--text-secondary);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--divider-color);
+    }
+  }
+
+  // Icon spacing in buttons
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+
+    // Icon before text
+    &::first-line {
+      font-size: var(--font-size-lg);
+    }
+  }
+}
+
+// Button animation on appear
+.control-buttons .btn {
+  animation: button-appear 0.3s ease backwards;
+}
+
+.control-buttons .btn:nth-child(1) { animation-delay: 0.1s; }
+.control-buttons .btn:nth-child(2) { animation-delay: 0.2s; }
+.control-buttons .btn:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes button-appear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -230,13 +708,72 @@
 
 .keyboard-hints {
   text-align: center;
-  margin-top: var(--spacing-md);
-  padding-top: var(--spacing-md);
-  border-top: 1px solid var(--divider-color);
+  margin-top: var(--spacing-lg);
+  padding: var(--spacing-md);
+  background: linear-gradient(135deg, rgba(33, 150, 243, 0.05), rgba(33, 150, 243, 0.1));
+  border-radius: var(--border-radius-sm);
+  border: 1px dashed var(--primary-color);
+  animation: hints-fade-in 0.5s ease 0.5s backwards;
 
-  small {
+  .hint-title {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+  }
+
+  .hint-items {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+  }
+
+  .hint-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
     color: var(--text-secondary);
+  }
+
+  // Keyboard key styling
+  kbd {
+    display: inline-block;
+    padding: 2px var(--spacing-xs);
+    background: linear-gradient(to bottom, #ffffff, #f0f0f0);
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 
+      0 1px 0 rgba(0, 0, 0, 0.2),
+      inset 0 0 0 2px #ffffff;
+    font-family: 'Courier New', monospace;
     font-size: var(--font-size-xs);
+    font-weight: 700;
+    color: #333;
+    text-transform: uppercase;
+    min-width: 32px;
+    text-align: center;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+      transform: translateY(-1px);
+      box-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.2),
+        inset 0 0 0 2px #ffffff;
+    }
+  }
+}
+
+@keyframes hints-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -267,11 +804,59 @@
     padding: var(--spacing-md);
   }
 
+  .progress-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+  }
+
   .control-buttons {
     flex-direction: column;
+    gap: var(--spacing-sm);
 
     .btn {
       width: 100%;
+      min-width: 100%;
     }
+  }
+
+  .keyboard-hints {
+    display: none; // Hide on mobile (touch devices)
+  }
+
+  .statistics-panel {
+    padding: var(--spacing-md);
+  }
+
+  .stat-row {
+    padding: var(--spacing-xs) var(--spacing-sm);
+  }
+}
+
+// ==================== Button Icon & Text Styling ====================
+
+.btn {
+  .btn-icon {
+    font-size: var(--font-size-lg);
+    line-height: 1;
+  }
+
+  .btn-text {
+    font-size: var(--font-size-md);
+    font-weight: 600;
+  }
+}
+
+// ==================== Print Styles (hide controls) ====================
+
+@media print {
+  .control-buttons,
+  .keyboard-hints {
+    display: none;
+  }
+
+  .send-progress {
+    box-shadow: none;
+    border: 1px solid #000;
   }
 }

@@ -73,18 +73,22 @@ export class SendProgressComponent implements OnInit, OnDestroy {
     /**
      * Component initialization
      * Subscribe to progress updates from SendQueueService
+     * Setup keyboard shortcuts
      */
     ngOnInit(): void {
         this.subscribeToProgress();
+        this.setupKeyboardShortcuts();
     }
 
     /**
      * Component cleanup
      * Unsubscribe from all observables
+     * Remove keyboard listeners
      */
     ngOnDestroy(): void {
         this.destroy$.next();
         this.destroy$.complete();
+        this.removeKeyboardShortcuts();
     }
 
     // ==================== Private Methods ====================
@@ -100,6 +104,57 @@ export class SendProgressComponent implements OnInit, OnDestroy {
                 this.progress = progress;
                 this.updateButtonStates(progress);
             });
+    }
+
+    /**
+     * Setup keyboard shortcuts for user controls
+     * Space = Pause/Resume
+     * Escape = Cancel
+     */
+    private setupKeyboardShortcuts(): void {
+        this.keyboardHandler = this.handleKeyboardEvent.bind(this);
+        document.addEventListener('keydown', this.keyboardHandler);
+    }
+
+    /**
+     * Remove keyboard shortcuts listeners
+     */
+    private removeKeyboardShortcuts(): void {
+        if (this.keyboardHandler) {
+            document.removeEventListener('keydown', this.keyboardHandler);
+        }
+    }
+
+    /**
+     * Handle keyboard events
+     */
+    private keyboardHandler: ((event: KeyboardEvent) => void) | null = null;
+
+    private handleKeyboardEvent(event: KeyboardEvent): void {
+        // Only handle shortcuts when operation is active
+        if (!this.isActive) return;
+
+        // Ignore if user is typing in input field
+        const target = event.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+        switch (event.key) {
+            case ' ': // Space key
+                event.preventDefault();
+                if (this.canPause) {
+                    this.onPause();
+                } else if (this.canResume) {
+                    this.onResume();
+                }
+                break;
+
+            case 'Escape': // Escape key
+                event.preventDefault();
+                if (this.canCancel) {
+                    this.onCancel();
+                }
+                break;
+        }
     }
 
     /**
@@ -229,6 +284,54 @@ export class SendProgressComponent implements OnInit, OnDestroy {
         return `${cost.toFixed(2)} BGN`;
     }
 
+    /**
+     * Format DateTime to readable string
+     * 
+     * @param date - Date object
+     * @returns Formatted time string (HH:mm:ss)
+     */
+    formatDateTime(date: Date): string {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const seconds = date.getSeconds().toString().padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    }
+
+    /**
+     * Get success rate percentage
+     * 
+     * @returns Success rate as percentage string
+     */
+    getSuccessRate(): string {
+        if (!this.progress || this.progress.total === 0) return '0%';
+
+        const rate = (this.progress.successful / this.progress.total) * 100;
+        return `${rate.toFixed(1)}%`;
+    }
+
+    /**
+     * Get failure rate percentage
+     * 
+     * @returns Failure rate as percentage string
+     */
+    getFailureRate(): string {
+        if (!this.progress || this.progress.total === 0) return '0%';
+
+        const rate = (this.progress.failed / this.progress.total) * 100;
+        return `${rate.toFixed(1)}%`;
+    }
+
+    /**
+     * Check if time remaining is low (less than 10 seconds)
+     * Used to trigger warning animation
+     * 
+     * @returns True if time is low
+     */
+    isTimeLow(): boolean {
+        if (!this.progress?.estimatedTimeRemaining) return false;
+        return this.progress.estimatedTimeRemaining < 10000; // 10 seconds
+    }
+
     // ==================== Event Handlers - User Controls ====================
 
     /**
@@ -261,16 +364,16 @@ export class SendProgressComponent implements OnInit, OnDestroy {
 
     /**
      * Handle cancel button click
-     * Shows confirmation dialog, then cancels operation
+     * Shows enhanced confirmation dialog with current statistics
      */
     onCancel(): void {
-        if (!this.canCancel) return;
+        if (!this.canCancel || !this.progress) return;
 
-        // Confirmation dialog
-        const confirmed = confirm(
-            'Сигурни ли сте, че искате да отмените изпращането?\n\n' +
-            'Изпратените до момента SMS-си ще останат изпратени.'
-        );
+        // Build confirmation message with current statistics
+        const confirmMessage = this.buildCancelConfirmationMessage();
+
+        // Show confirmation dialog
+        const confirmed = confirm(confirmMessage);
 
         if (!confirmed) return;
 
@@ -279,6 +382,36 @@ export class SendProgressComponent implements OnInit, OnDestroy {
         } catch (error) {
             console.error('Error cancelling send operation:', error);
         }
+    }
+
+    /**
+     * Build detailed confirmation message for cancel action
+     * Includes current progress statistics
+     * 
+     * @returns Formatted confirmation message
+     */
+    private buildCancelConfirmationMessage(): string {
+        if (!this.progress) return 'Сигурни ли сте, че искате да отмените изпращането?';
+
+        const lines = [
+            '🚨 ОТМЯНА НА ИЗПРАЩАНЕ',
+            '',
+            '⚠️ Сигурни ли сте, че искате да отмените операцията?',
+            '',
+            '📊 Текущ прогрес:',
+            `   • Изпратени: ${this.progress.successful} SMS`,
+            `   • Неуспешни: ${this.progress.failed} SMS`,
+            `   • Обработени: ${this.progress.current} / ${this.progress.total}`,
+            `   • Прогрес: ${this.progress.percentage}%`,
+            '',
+            '💡 Забележка:',
+            '   • Изпратените SMS-си ще ОСТАНАТ изпратени',
+            '   • Неизпратените съобщения ще бъдат ПРОПУСНАТИ',
+            '',
+            'Натиснете OK за потвърждение или Cancel за продължаване.'
+        ];
+
+        return lines.join('\n');
     }
 
     /**
