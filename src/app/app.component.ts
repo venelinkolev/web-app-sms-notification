@@ -16,6 +16,7 @@ import { ClientListComponent } from './features/client-list/client-list.componen
 import { SMSPreviewComponent } from './features/sms-preview/sms-preview.component';
 import { NotificationComponent } from './shared/components/notification/notification.component';
 import { ErrorLogViewerComponent } from './shared/components/error-log-viewer/error-log-viewer.component';
+import { SendProgressComponent, SendResultsComponent } from './features';
 
 // Models
 import { ClientDataImport, NotificationType } from './core/models';
@@ -32,6 +33,8 @@ import { ErrorContext, ErrorSeverity } from './core/models/error.models';
     SMSPreviewComponent,
     NotificationComponent,
     ErrorLogViewerComponent,
+    SendProgressComponent,
+    SendResultsComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
