@@ -1,0 +1,134 @@
+<!-- 
+  Send Progress Component Template
+  Shows real-time SMS sending progress with controls
+-->
+
+<div class="send-progress-container">
+
+    <!-- Only show when there is progress data -->
+    @if (progress) {
+    <div class="send-progress" [class]="getStatusClass()">
+
+        <!-- Progress Header with Status -->
+        <div class="progress-header">
+            <div class="status-info">
+                <span class="status-icon">{{ getStatusIcon() }}</span>
+                <span class="status-text">{{ getStatusText() }}</span>
+            </div>
+            <div class="status-badge" [class]="getStatusClass()">
+                {{ getStatusText() }}
+            </div>
+        </div>
+
+        <!-- Progress Bar Section -->
+        <!-- Will be implemented in Task 5.2.2 -->
+        <div class="progress-bar-section">
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar-track">
+                    <div class="progress-bar-fill" [class]="getStatusClass()" [style.width.%]="progress.percentage">
+                    </div>
+                </div>
+                <div class="progress-percentage">
+                    {{ progress.percentage }}%
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Statistics Panel -->
+        <!-- Will be implemented in Task 5.2.3 -->
+        <div class="statistics-panel">
+            <div class="stat-row">
+                <span class="stat-label">📊 Прогрес:</span>
+                <span class="stat-value">{{ progress.current }} / {{ progress.total }} SMS</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">✅ Успешни:</span>
+                <span class="stat-value text-success">{{ progress.successful }}</span>
+            </div>
+
+            <div class="stat-row">
+                <span class="stat-label">❌ Неуспешни:</span>
+                <span class="stat-value text-error">{{ progress.failed }}</span>
+            </div>
+
+            @if (progress.estimatedTimeRemaining) {
+            <div class="stat-row">
+                <span class="stat-label">⏱️ Оставащо време:</span>
+                <span class="stat-value">{{ formatTime(progress.estimatedTimeRemaining) }}</span>
+            </div>
+            }
+
+            <div class="stat-row">
+                <span class="stat-label">💰 Обща цена:</span>
+                <span class="stat-value">{{ formatCost(progress.totalCost) }}</span>
+            </div>
+
+            @if (progress.sendingSpeed) {
+            <div class="stat-row">
+                <span class="stat-label">⚡ Скорост:</span>
+                <span class="stat-value">{{ progress.sendingSpeed }} SMS/sec</span>
+            </div>
+            }
+
+            @if (progress.currentMessage) {
+            <div class="stat-row current-message">
+                <span class="stat-label">ℹ️ Статус:</span>
+                <span class="stat-value">{{ progress.currentMessage }}</span>
+            </div>
+            }
+        </div>
+
+        <!-- Control Buttons -->
+        <!-- Will be implemented in Task 5.2.4 -->
+        <div class="control-buttons">
+
+            <!-- Pause Button (when sending) -->
+            @if (canPause) {
+            <button class="btn btn-warning" (click)="onPause()" [disabled]="!canPause">
+                ⏸️ Пауза
+            </button>
+            }
+
+            <!-- Resume Button (when paused) -->
+            @if (canResume) {
+            <button class="btn btn-primary" (click)="onResume()" [disabled]="!canResume">
+                ▶️ Продължи
+            </button>
+            }
+
+            <!-- Cancel Button (when active) -->
+            @if (canCancel) {
+            <button class="btn btn-outline btn-danger" (click)="onCancel()" [disabled]="!canCancel">
+                ❌ Отмени
+            </button>
+            }
+
+            <!-- Close Button (when completed) -->
+            @if (progress.status === SendStatus.COMPLETED ||
+            progress.status === SendStatus.CANCELLED ||
+            progress.status === SendStatus.FAILED) {
+            <button class="btn btn-outline" (click)="onClose()">
+                ✖️ Затвори
+            </button>
+            }
+        </div>
+
+        <!-- Keyboard Shortcuts Hint (optional) -->
+        @if (isActive) {
+        <div class="keyboard-hints">
+            <small>💡 Клавиши: Space - Пауза/Продължи | Esc - Отмени</small>
+        </div>
+        }
+
+    </div>
+    }
+
+    <!-- Empty State (no progress data) -->
+    @if (!progress || progress.status === SendStatus.IDLE) {
+    <div class="empty-state">
+        <p class="empty-message">Няма активна операция за изпращане</p>
+    </div>
+    }
+
+</div>

@@ -6,3 +6,6 @@ export { ClientListComponent } from './client-list/client-list.component';
 
 // SMS Preview Feature
 export { SMSPreviewComponent } from './sms-preview/sms-preview.component';
+
+// Send Progress Feature
+export { SendProgressComponent } from './send-progress/send-progress.component';
