@@ -30,19 +30,22 @@ export class SMSTemplateService {
     private defaultTemplate: SMSTemplate = {
         id: 'default',
         name: 'Напомняне за изтичащ договор',
-        content: 'Уважаеми {Ime_Firma},\n' +
-            'Договорът Ви №{Number} за {Model} изтича на {End_Data}.\n' +
-            'За повече информация: {Phone}',
+        content: 'YanakSoft:Dogovor №{Number} za {Model} izticha {End_Data}.{Ime_Firma} s obekt {Ime_Obekt}.Info:029743232',
         placeholders: [
             { key: 'Ime_Firma', description: 'Име на фирма', example: 'Софтуер България ЕООД' },
             { key: 'Number', description: 'Номер на договор', example: '12345' },
             { key: 'Model', description: 'Модел на оборудване', example: 'AlarmSystem Pro' },
             { key: 'End_Data', description: 'Дата на изтичане', example: '30.10.2025' },
-            { key: 'Phone', description: 'Телефон за контакт', example: '+359888123456' }
+            { key: 'Phone', description: 'Телефон за контакт', example: '+359888123456' },
+            { key: 'Ime_Obekt', description: 'Име на обект', example: 'Офис 1' },
+            { key: 'Adres_Obekt', description: 'Адрес на обект', example: 'София, ул. Примерна 1' },
+            { key: 'Dan_Number', description: 'Данъчен номер', example: 'BG123456789' },
+            { key: 'Number_EKA', description: 'Номер на ФУ', example: 'ZK123456' },
+            { key: 'bulst', description: 'Булстат', example: '123456789' },
         ],
         characterInfo: {
             baseLength: 0,
-            encoding: SMSEncoding.UNICODE,
+            encoding: SMSEncoding.STANDARD,
             estimatedParts: 1
         },
         createdAt: new Date(),
