@@ -13,6 +13,20 @@
     @if (hasResults && result) {
     <div class="results-content">
 
+        <!-- Retry Loading Overlay -->
+        <!-- Task 5.3.4: Show during retry operation -->
+        @if (isRetrying) {
+        <div class="retry-overlay">
+            <div class="retry-spinner-container">
+                <div class="retry-spinner"></div>
+                <div class="retry-text">
+                    <strong>🔄 Повторно изпращане...</strong>
+                    <p>Моля изчакайте докато се опитаме отново да изпратим неуспешните съобщения</p>
+                </div>
+            </div>
+        </div>
+        }
+
         <!-- Results Header -->
         <div class="results-header">
             <div class="header-left">
@@ -226,8 +240,9 @@
                 </h3>
                 @if (canRetry() && showFailedList) {
                 <button class="btn btn-outline btn-sm retry-all-btn"
-                    (click)="retryAllFailed(); $event.stopPropagation()" type="button">
-                    🔄 Опитай отново всички
+                    (click)="retryAllFailed(); $event.stopPropagation()" [disabled]="isRetrying" type="button">
+                    <span class="btn-icon">🔄</span>
+                    Опитай отново всички
                     <span class="retry-count">({{ getRetryableCount() }})</span>
                 </button>
                 }
@@ -259,8 +274,11 @@
                             {{ formatTimestamp(item.timestamp) }}
                         </div>
                         @if (item.errorCode && canRetry()) {
-                        <button class="btn btn-sm btn-outline retry-btn" (click)="retryIndividual(item)" type="button">
-                            🔄 Retry
+                        <button class="btn btn-sm btn-outline retry-btn" (click)="retryIndividual(item)"
+                            [disabled]="isRetrying" type="button"
+                            [title]="'Опитай отново това съобщение' + (isRetrying ? ' (Моля изчакайте...)' : '')">
+                            <span class="btn-icon">🔄</span>
+                            Retry
                         </button>
                         }
                     </div>
@@ -297,16 +315,49 @@
         }
 
         <!-- Export Actions -->
-        <!-- Task 5.3.5: Will be implemented -->
+        <!-- Task 5.3.5: Complete Implementation -->
         <div class="export-section card">
-            <h3>📥 Експорт на резултати</h3>
+            <div class="export-header">
+                <h3>📥 Експорт на резултати</h3>
+                <p class="export-description">
+                    Изтеглете резултатите в CSV или JSON формат за архивиране или допълнителна обработка
+                </p>
+            </div>
+
             <div class="export-actions">
-                <button class="btn btn-outline" (click)="exportToCSV()" type="button">
-                    📄 Експорт CSV
+                <button class="btn btn-export btn-csv" (click)="exportToCSV()" type="button"
+                    [title]="'Експортирай ' + (result.stats.totalAttempted) + ' резултата в CSV формат'">
+                    <span class="btn-icon">📄</span>
+                    <div class="btn-content">
+                        <div class="btn-label">Експорт CSV</div>
+                        <div class="btn-sublabel">Табличен формат за Excel</div>
+                    </div>
                 </button>
-                <button class="btn btn-outline" (click)="exportToJSON()" type="button">
-                    📋 Експорт JSON
+
+                <button class="btn btn-export btn-json" (click)="exportToJSON()" type="button"
+                    [title]="'Експортирай пълните данни в JSON формат'">
+                    <span class="btn-icon">📋</span>
+                    <div class="btn-content">
+                        <div class="btn-label">Експорт JSON</div>
+                        <div class="btn-sublabel">Пълни данни за обработка</div>
+                    </div>
                 </button>
+            </div>
+
+            <!-- Export Info -->
+            <div class="export-info">
+                <div class="info-item">
+                    <span class="info-icon">ℹ️</span>
+                    <span class="info-text">
+                        CSV включва: клиент, телефон, статус, грешка, цена, време
+                    </span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">📊</span>
+                    <span class="info-text">
+                        JSON включва: всички данни, статистики и metadata
+                    </span>
+                </div>
             </div>
         </div>
 

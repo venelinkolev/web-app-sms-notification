@@ -335,7 +335,7 @@ export class SendResultsComponent implements OnInit, OnDestroy {
     }
 
     // ==================== Retry Functionality ====================
-    // Will be implemented in Task 5.3.4
+    // Task 5.3.4: Full Implementation
 
     /**
      * Check if retry is available
@@ -352,38 +352,501 @@ export class SendResultsComponent implements OnInit, OnDestroy {
     }
 
     /**
-     * Retry all failed messages (placeholder)
+     * Retry all failed messages
+     * Task 5.3.4: Complete implementation
      */
     retryAllFailed(): void {
-        // Will be implemented in Task 5.3.4
-        console.log('Retry all failed - to be implemented');
+        if (!this.result || !this.canRetry()) {
+            this.notificationService.warning(
+                'Няма съобщения за retry',
+                'Не са намерени съобщения, които могат да бъдат опитани отново'
+            );
+            return;
+        }
+
+        // Confirmation dialog
+        const confirmMessage = this.buildRetryConfirmationMessage();
+        const confirmed = confirm(confirmMessage);
+
+        if (!confirmed) {
+            return;
+        }
+
+        // Start retry operation
+        this.isRetrying = true;
+
+        this.smsService.retryFailedMessages(this.result).subscribe({
+            next: (retryResult: BatchOperationResult) => {
+                // Merge retry result with original result
+                this.mergeRetryResults(retryResult);
+
+                // Show success notification
+                this.notificationService.success(
+                    '✅ Retry завършен',
+                    `Успешни: ${retryResult.stats.successfulCount} | Неуспешни: ${retryResult.stats.failedCount}`,
+                    5000
+                );
+
+                this.isRetrying = false;
+            },
+            error: (error) => {
+                console.error('Error retrying failed messages:', error);
+
+                this.notificationService.error(
+                    'Грешка при retry',
+                    error.message || 'Неуспешно повторно изпращане'
+                );
+
+                this.isRetrying = false;
+            }
+        });
     }
 
     /**
-     * Retry individual message (placeholder)
+     * Retry individual message
+     * Task 5.3.4: Complete implementation
      */
     retryIndividual(message: SMSSendResult): void {
-        // Will be implemented in Task 5.3.4
-        console.log('Retry individual message:', message.clientId);
+        if (!this.result || !message.errorCode) {
+            return;
+        }
+
+        // Check if message is retryable
+        const isRetryable = this.result.retryableMessages.some(
+            rm => rm.clientId === message.clientId && rm.phoneNumber === message.phoneNumber
+        );
+
+        if (!isRetryable) {
+            this.notificationService.warning(
+                'Не може да се retry',
+                'Това съобщение не може да бъде опитано отново'
+            );
+            return;
+        }
+
+        // Confirmation
+        const confirmed = confirm(
+            `Искате ли да опитате отново изпращането към:\n\n` +
+            `Клиент: ${message.clientId}\n` +
+            `Телефон: ${message.phoneNumber}\n\n` +
+            `Грешка: ${message.error || 'Неизвестна'}`
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        // Create a temporary result with only this message for retry
+        const singleMessageResult: BatchOperationResult = {
+            successful: [],
+            failed: [message],
+            invalid: [],
+            stats: {
+                totalAttempted: 1,
+                successfulCount: 0,
+                failedCount: 1,
+                invalidCount: 0,
+                successRate: 0,
+                failureRate: 1,
+                totalCost: 0,
+                averageCost: 0
+            },
+            canRetry: true,
+            retryableMessages: [{
+                clientId: message.clientId,
+                phoneNumber: message.phoneNumber,
+                message: message.message || '',
+                errorCode: message.errorCode,
+                errorMessage: message.error || ''
+            }],
+            metadata: this.result.metadata
+        };
+
+        // Start individual retry
+        this.isRetrying = true;
+
+        this.smsService.retryFailedMessages(singleMessageResult).subscribe({
+            next: (retryResult: BatchOperationResult) => {
+                // Update the specific message in our lists
+                this.updateIndividualRetryResult(message, retryResult);
+
+                // Show notification
+                if (retryResult.stats.successfulCount > 0) {
+                    this.notificationService.success(
+                        '✅ SMS изпратен успешно',
+                        `Съобщението до ${message.clientId} беше изпратено`
+                    );
+                } else {
+                    this.notificationService.error(
+                        '❌ Retry неуспешен',
+                        `Съобщението до ${message.clientId} отново не можа да бъде изпратено`
+                    );
+                }
+
+                this.isRetrying = false;
+            },
+            error: (error) => {
+                console.error('Error retrying individual message:', error);
+
+                this.notificationService.error(
+                    'Грешка при retry',
+                    error.message || 'Неуспешно повторно изпращане'
+                );
+
+                this.isRetrying = false;
+            }
+        });
+    }
+
+    /**
+     * Build retry confirmation message
+     * Task 5.3.4: Helper for user confirmation
+     */
+    private buildRetryConfirmationMessage(): string {
+        if (!this.result) return '';
+
+        const retryCount = this.getRetryableCount();
+        const totalFailed = this.result.stats.failedCount;
+
+        return (
+            '🔄 ПОВТОРНО ИЗПРАЩАНЕ\n\n' +
+            `Ще бъдат опитани отново ${retryCount} от ${totalFailed} неуспешни съобщения.\n\n` +
+            `Текуща статистика:\n` +
+            `✅ Успешни: ${this.result.stats.successfulCount}\n` +
+            `❌ Неуспешни: ${this.result.stats.failedCount}\n\n` +
+            `Сигурни ли сте, че искате да продължите?`
+        );
+    }
+
+    /**
+     * Merge retry results with original results
+     * Task 5.3.4: Update state after retry
+     */
+    private mergeRetryResults(retryResult: BatchOperationResult): void {
+        if (!this.result) return;
+
+        // Remove retry-successful messages from failed list
+        const retrySuccessfulPhones = new Set(
+            retryResult.successful.map(s => s.phoneNumber)
+        );
+
+        this.result.failed = this.result.failed.filter(
+            f => !retrySuccessfulPhones.has(f.phoneNumber)
+        );
+
+        // Add retry-successful to successful list
+        this.result.successful.push(...retryResult.successful);
+
+        // Update retry-failed in failed list (with new error info)
+        retryResult.failed.forEach(retryFailed => {
+            const existingIndex = this.result!.failed.findIndex(
+                f => f.phoneNumber === retryFailed.phoneNumber
+            );
+
+            if (existingIndex >= 0) {
+                // Update with new error info
+                this.result!.failed[existingIndex] = retryFailed;
+            } else {
+                // Add if not found (shouldn't happen)
+                this.result!.failed.push(retryFailed);
+            }
+        });
+
+        // Recalculate stats
+        this.result.stats = this.recalculateStats(this.result);
+
+        // Update operation status
+        this.operationStatus = this.calculateOperationStatus(this.result);
+
+        // Refresh lists
+        this.successfulList = this.result.successful;
+        this.failedList = this.result.failed;
+        this.applyFilters();
+
+        // Update in SendQueueService
+        // Note: We don't have direct access to update SendQueueService,
+        // but the component already subscribes to it, so manual update here
+    }
+
+    /**
+     * Update individual retry result
+     * Task 5.3.4: Update state after single message retry
+     */
+    private updateIndividualRetryResult(
+        originalMessage: SMSSendResult,
+        retryResult: BatchOperationResult
+    ): void {
+        if (!this.result) return;
+
+        if (retryResult.stats.successfulCount > 0) {
+            // Retry successful - move from failed to successful
+            this.result.failed = this.result.failed.filter(
+                f => f.phoneNumber !== originalMessage.phoneNumber
+            );
+
+            this.result.successful.push(...retryResult.successful);
+        } else {
+            // Retry failed - update error info
+            const failedIndex = this.result.failed.findIndex(
+                f => f.phoneNumber === originalMessage.phoneNumber
+            );
+
+            if (failedIndex >= 0 && retryResult.failed.length > 0) {
+                this.result.failed[failedIndex] = retryResult.failed[0];
+            }
+        }
+
+        // Recalculate stats
+        this.result.stats = this.recalculateStats(this.result);
+
+        // Update operation status
+        this.operationStatus = this.calculateOperationStatus(this.result);
+
+        // Refresh lists
+        this.successfulList = this.result.successful;
+        this.failedList = this.result.failed;
+        this.applyFilters();
+    }
+
+    /**
+     * Recalculate statistics after retry
+     * Task 5.3.4: Helper for stats update
+     */
+    private recalculateStats(result: BatchOperationResult): BatchOperationResult['stats'] {
+        const totalAttempted = result.successful.length + result.failed.length;
+        const successfulCount = result.successful.length;
+        const failedCount = result.failed.length;
+        const invalidCount = result.invalid.length;
+
+        const totalCost = result.successful.reduce((sum, s) => sum + (s.cost || 0), 0);
+        const averageCost = successfulCount > 0 ? totalCost / successfulCount : 0;
+
+        const successRate = totalAttempted > 0 ? successfulCount / totalAttempted : 0;
+        const failureRate = totalAttempted > 0 ? failedCount / totalAttempted : 0;
+
+        return {
+            totalAttempted,
+            successfulCount,
+            failedCount,
+            invalidCount,
+            successRate,
+            failureRate,
+            totalCost,
+            averageCost
+        };
     }
 
     // ==================== Export Functionality ====================
-    // Will be implemented in Task 5.3.5
+    // Task 5.3.5: Full Implementation
 
     /**
-     * Export results to CSV (placeholder)
+     * Export results to CSV
+     * Task 5.3.5: Complete implementation
      */
     exportToCSV(): void {
-        // Will be implemented in Task 5.3.5
-        console.log('Export to CSV - to be implemented');
+        if (!this.result) {
+            this.notificationService.warning(
+                'Няма резултати',
+                'Няма данни за експортиране'
+            );
+            return;
+        }
+
+        try {
+            // Build CSV content
+            const csvContent = this.buildCSVContent();
+
+            // Create filename with timestamp
+            const filename = this.generateFilename('csv');
+
+            // Download file
+            this.downloadFile(csvContent, filename, 'text/csv');
+
+            // Success notification
+            this.notificationService.success(
+                '📄 CSV експортиран',
+                `Файлът ${filename} беше изтеглен успешно`,
+                4000
+            );
+
+            // Log export
+            console.log('📥 CSV exported:', filename);
+        } catch (error) {
+            console.error('Error exporting CSV:', error);
+
+            this.notificationService.error(
+                'Грешка при експорт',
+                'Не можа да се експортира CSV файлът'
+            );
+        }
     }
 
     /**
-     * Export results to JSON (placeholder)
+     * Export results to JSON
+     * Task 5.3.5: Complete implementation
      */
     exportToJSON(): void {
-        // Will be implemented in Task 5.3.5
-        console.log('Export to JSON - to be implemented');
+        if (!this.result) {
+            this.notificationService.warning(
+                'Няма резултати',
+                'Няма данни за експортиране'
+            );
+            return;
+        }
+
+        try {
+            // Convert result to JSON with formatting
+            const jsonContent = JSON.stringify(this.result, null, 2);
+
+            // Create filename with timestamp
+            const filename = this.generateFilename('json');
+
+            // Download file
+            this.downloadFile(jsonContent, filename, 'application/json');
+
+            // Success notification
+            this.notificationService.success(
+                '📋 JSON експортиран',
+                `Файлът ${filename} беше изтеглен успешно`,
+                4000
+            );
+
+            // Log export
+            console.log('📥 JSON exported:', filename);
+        } catch (error) {
+            console.error('Error exporting JSON:', error);
+
+            this.notificationService.error(
+                'Грешка при експорт',
+                'Не можа да се експортира JSON файлът'
+            );
+        }
+    }
+
+    /**
+     * Build CSV content from results
+     * Task 5.3.5: CSV generation logic
+     */
+    private buildCSVContent(): string {
+        if (!this.result) return '';
+
+        // CSV Headers
+        const headers = [
+            'Клиент',
+            'Телефон',
+            'Статус',
+            'Грешка',
+            'Код на грешка',
+            'Цена (BGN)',
+            'Време на изпращане'
+        ];
+
+        // Build rows
+        const rows: string[][] = [];
+
+        // Add successful messages
+        this.result.successful.forEach(item => {
+            rows.push([
+                this.escapeCSV(item.clientId),
+                this.escapeCSV(item.phoneNumber),
+                'Успешно',
+                '',
+                '',
+                (item.cost || 0).toFixed(2),
+                this.formatTimestamp(item.timestamp)
+            ]);
+        });
+
+        // Add failed messages
+        this.result.failed.forEach(item => {
+            rows.push([
+                this.escapeCSV(item.clientId),
+                this.escapeCSV(item.phoneNumber),
+                'Неуспешно',
+                this.escapeCSV(item.error || 'Неизвестна грешка'),
+                String(item.errorCode || ''),
+                '',
+                this.formatTimestamp(item.timestamp)
+            ]);
+        });
+
+        // Add invalid numbers
+        this.result.invalid.forEach(item => {
+            rows.push([
+                this.escapeCSV(item.clientId),
+                this.escapeCSV(item.phoneNumber),
+                'Невалиден',
+                this.escapeCSV(item.reason),
+                '',
+                '',
+                ''
+            ]);
+        });
+
+        // Combine into CSV string
+        const csvLines = [
+            headers.join(','),
+            ...rows.map(row => row.join(','))
+        ];
+
+        return csvLines.join('\n');
+    }
+
+    /**
+     * Escape CSV field (handle commas, quotes, newlines)
+     * Task 5.3.5: CSV escaping helper
+     */
+    private escapeCSV(field: string): string {
+        if (!field) return '';
+
+        // If field contains comma, quote, or newline - wrap in quotes and escape quotes
+        if (field.includes(',') || field.includes('"') || field.includes('\n')) {
+            return `"${field.replace(/"/g, '""')}"`;
+        }
+
+        return field;
+    }
+
+    /**
+     * Generate filename with timestamp
+     * Task 5.3.5: Filename generation
+     */
+    private generateFilename(extension: 'csv' | 'json'): string {
+        const now = new Date();
+
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+
+        return `sms-results-${year}-${month}-${day}-${hours}${minutes}${seconds}.${extension}`;
+    }
+
+    /**
+     * Download file using Blob API
+     * Task 5.3.5: File download helper
+     */
+    private downloadFile(content: string, filename: string, mimeType: string): void {
+        // Create Blob
+        const blob = new Blob([content], { type: mimeType });
+
+        // Create download URL
+        const url = window.URL.createObjectURL(blob);
+
+        // Create temporary link element
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+
+        // Cleanup
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
     }
 
     // ==================== Helper Methods ====================

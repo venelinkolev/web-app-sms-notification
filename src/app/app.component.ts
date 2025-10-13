@@ -211,7 +211,7 @@ export class AppComponent implements OnInit {
     this.smsService.sendSMS({
       to: testPhone,
       message: 'Тестово съобщение от SMS Notification App!',
-      from: 'Test'
+      from: '1511'
     }).subscribe({
       next: (response) => {
         console.log('✅ SMS Response:', response);
