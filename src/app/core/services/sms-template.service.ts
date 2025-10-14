@@ -317,8 +317,8 @@ export class SMSTemplateService {
             estimatedParts = Math.ceil(count / concatLimit);
         }
 
-        // Cost estimation (0.16 points per SMS part)
-        const estimatedCost = estimatedParts * 0.16;
+        // Cost estimation (0.10 points per SMS part)
+        const estimatedCost = estimatedParts * 0.10;
 
         return {
             count,

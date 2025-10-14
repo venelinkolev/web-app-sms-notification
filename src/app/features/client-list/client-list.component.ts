@@ -277,8 +277,8 @@ export class ClientListComponent implements OnInit, OnDestroy {
     }
 
     /**
-   * Send SMS (placeholder)
-   */
+     * Send SMS - Navigate to SMS Preview
+     */
     onSendSMS(): void {
         // Валидация на phone selections
         const validation = this.dataService.validatePhoneSelections();
@@ -297,13 +297,25 @@ export class ClientListComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // Proceed with SMS sending...
+        // Get selected records
         const selected = this.dataService.getSelectedRecords();
-        console.log('Sending SMS to:', selected);
-
-        // Show success notification
         const totalPhones = selected.reduce((sum, r) => sum + r.selectedPhoneCount, 0);
-        alert(`Готово за SMS изпращане към ${selected.length} клиента (${totalPhones} телефона)! (Функционалност в следваща под-задача)`);
+
+        console.log('Selected records for SMS:', selected);
+
+        // Show info notification
+        this.notificationService.info(
+            '📨 Готово за изпращане',
+            `${selected.length} клиента (${totalPhones} телефона) избрани. Scroll надолу към SMS Preview секцията.`
+        );
+
+        // Scroll to SMS Preview section
+        setTimeout(() => {
+            const smsPreviewSection = document.querySelector('.sms-preview-section');
+            if (smsPreviewSection) {
+                smsPreviewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }, 100);
     }
 
     /**
