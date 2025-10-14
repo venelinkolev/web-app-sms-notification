@@ -63,6 +63,9 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
     isGenerating = false;
     isSending = false;
 
+    // Transliteration toggle state (DEFAULT: enabled = Latin)
+    isTransliterationEnabled = true;
+
     // SMS sending results (for error tracking)
     lastSendResult: BatchOperationResult | null = null;
     smsErrors: Map<string, SMSSendResult> = new Map(); // clientId -> error result
@@ -139,7 +142,8 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
             // Generate all personalized SMS
             this.personalizedSMS = this.templateService.generateBatchSMS(
                 this.currentTemplate,
-                this.selectedRecords
+                this.selectedRecords,
+                this.isTransliterationEnabled,
             );
 
             // Update statistics
@@ -287,6 +291,29 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
     }
 
     /**
+     * Toggle transliteration on/off
+     * Switches between Cyrillic (70 chars) and Latin (160 chars) modes
+     */
+    toggleTransliteration(): void {
+        // Toggle the state
+        this.isTransliterationEnabled = !this.isTransliterationEnabled;
+
+        // Regenerate previews with new transliteration setting
+        this.generatePreviews();
+
+        // Notification with current mode info
+        const mode = this.isTransliterationEnabled ? 'латиница' : 'кирилица';
+        const charLimit = this.isTransliterationEnabled ? '160' : '70';
+        const icon = this.isTransliterationEnabled ? '🇬🇧' : '🇧🇬';
+
+        this.notificationService.info(
+            `${icon} Режим променен`,
+            `SMS-ите ще бъдат на ${mode} (${charLimit} символа/SMS)`,
+            4000
+        );
+    }
+
+    /**
      * Send SMS to all selected clients
      */
     async sendSMS(): Promise<void> {
@@ -347,13 +374,27 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
                 3000
             );
 
-            // Prepare batch messages
-            const messages: BatchSMSMessage[] = validSMS.map(sms => ({
-                clientId: sms.clientId,
-                phoneNumber: sms.phoneNumber,
-                message: sms.content,
-                customId: `preview-${sms.clientId}-${Date.now()}`
-            }));
+            // Prepare batch messages with FRESH generation using current transliteration setting
+            const messages: BatchSMSMessage[] = validSMS.map(sms => {
+                const record = this.selectedRecords.find(r => r.id === sms.clientId);
+                if (!record || !this.currentTemplate) {
+                    throw new Error(`Record not found for client ${sms.clientId}`);
+                }
+
+                // Generate fresh personalized SMS with current transliteration setting
+                const freshSMS = this.templateService.generatePersonalizedSMS(
+                    this.currentTemplate,
+                    record,
+                    this.isTransliterationEnabled
+                );
+
+                return {
+                    clientId: sms.clientId,
+                    phoneNumber: sms.phoneNumber,
+                    message: freshSMS.content,
+                    customId: `preview-${sms.clientId}-${Date.now()}`
+                };
+            });
 
             // Send with tracking (Phase 5 - will be implemented)
             // For now, this is a placeholder that demonstrates the error handling flow

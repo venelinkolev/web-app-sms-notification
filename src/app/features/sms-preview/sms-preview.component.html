@@ -57,6 +57,11 @@
         <div class="char-count-section">
             <div class="char-count-header">
                 <span class="char-count-label">Character Count:</span>
+                @if (isTransliterationEnabled) {
+                <span class="mode-badge latin">LAT</span>
+                } @else {
+                <span class="mode-badge cyrillic">CYR</span>
+                }
                 <span class="char-count-value"
                     [class]="getCharCountColor(templateCharCount.count, templateCharCount.encoding)">
                     {{ templateCharCount.count }} chars
@@ -81,6 +86,47 @@
                 </span>
                 <span>~{{ templateCharCount.estimatedCost.toFixed(2) }} credits per SMS</span>
             </div>
+        </div>
+    </div>
+
+    <!-- Transliteration Toggle Section -->
+    <div class="transliteration-toggle-section card">
+        <div class="toggle-header">
+            <h4>🔤 Режим на символи</h4>
+            <p class="toggle-description">
+                Изберете дали SMS-ите да се изпращат на кирилица (70 символа) или латиница (160 символа)
+            </p>
+        </div>
+
+        <div class="toggle-control">
+            <label class="toggle-switch">
+                <input type="checkbox" [(ngModel)]="isTransliterationEnabled" (change)="toggleTransliteration()" />
+                <span class="toggle-slider"></span>
+            </label>
+
+            <div class="toggle-labels">
+                <span class="toggle-label" [class.active]="!isTransliterationEnabled">
+                    🇧🇬 Кирилица (70 chars)
+                </span>
+                <span class="toggle-label" [class.active]="isTransliterationEnabled">
+                    🇬🇧 Латиница (160 chars)
+                </span>
+            </div>
+        </div>
+
+        <!-- Info box -->
+        <div class="toggle-info" [class.latin-mode]="isTransliterationEnabled">
+            @if (isTransliterationEnabled) {
+            <span class="info-icon">💰</span>
+            <span class="info-text">
+                Активен режим ЛАТИНИЦА - по-евтино изпращане (160 символа/SMS)
+            </span>
+            } @else {
+            <span class="info-icon">ℹ️</span>
+            <span class="info-text">
+                Активен режим КИРИЛИЦА - оригинален текст (70 символа/SMS)
+            </span>
+            }
         </div>
     </div>
 

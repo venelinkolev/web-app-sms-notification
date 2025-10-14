@@ -14,6 +14,8 @@ import {
     ValidationErrorCode
 } from '../models';
 
+import { transliterateCyrillicToLatin, TRANSLITERATION_MAPS } from '../utils';
+
 /**
  * SMS Template Service
  * Manages SMS templates with dynamic field substitution and character counting
@@ -198,10 +200,16 @@ export class SMSTemplateService {
      */
     generatePersonalizedSMS(
         template: SMSTemplate,
-        record: ParsedClientRecord
+        record: ParsedClientRecord,
+        transliterate: boolean = true,
     ): PersonalizedSMS {
         // Replace placeholders with actual data
-        const content = this.replacePlaceholders(template.content, record);
+        let content = this.replacePlaceholders(template.content, record);
+
+        // Apply transliteration if enabled (Cyrillic → Latin)
+        if (transliterate) {
+            content = transliterateCyrillicToLatin(content, TRANSLITERATION_MAPS.SMS_FRIENDLY);
+        }
 
         // Calculate character count
         const { count, encoding, estimatedParts, estimatedCost } = this.calculateCharacterCount(content);
@@ -228,9 +236,10 @@ export class SMSTemplateService {
      */
     generateBatchSMS(
         template: SMSTemplate,
-        records: ParsedClientRecord[]
+        records: ParsedClientRecord[],
+        transliterate: boolean = true,
     ): PersonalizedSMS[] {
-        return records.map(record => this.generatePersonalizedSMS(template, record));
+        return records.map(record => this.generatePersonalizedSMS(template, record, transliterate));
     }
 
     /**
