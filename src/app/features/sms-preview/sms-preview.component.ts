@@ -20,6 +20,8 @@ import {
     SMSEncoding
 } from '../../core/models';
 
+import { transliterateCyrillicToLatin, TRANSLITERATION_MAPS } from '../../core/utils';
+
 @Component({
     selector: 'app-sms-preview',
     standalone: true,
@@ -195,6 +197,7 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
 
     /**
      * Update template character count
+     * Applies transliteration if enabled before calculating
      */
     updateTemplateCharCount(): void {
         if (!this.editedTemplateContent) {
@@ -207,9 +210,14 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.templateCharCount = this.templateService.calculateCharacterCount(
-            this.editedTemplateContent
-        );
+        // Apply transliteration if enabled (to show accurate character count)
+        let content = this.editedTemplateContent;
+        if (this.isTransliterationEnabled) {
+            content = transliterateCyrillicToLatin(content, TRANSLITERATION_MAPS.SMS_FRIENDLY);
+        }
+
+        // Calculate character count on potentially transliterated content
+        this.templateCharCount = this.templateService.calculateCharacterCount(content);
     }
 
     /**
@@ -295,11 +303,11 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
      * Switches between Cyrillic (70 chars) and Latin (160 chars) modes
      */
     toggleTransliteration(): void {
-        // Toggle the state
-        this.isTransliterationEnabled = !this.isTransliterationEnabled;
-
         // Regenerate previews with new transliteration setting
         this.generatePreviews();
+
+        // Update template character count display (ВАЖНО!)
+        this.updateTemplateCharCount();
 
         // Notification with current mode info
         const mode = this.isTransliterationEnabled ? 'латиница' : 'кирилица';
@@ -461,6 +469,36 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
      */
     get hasMoreSMS(): boolean {
         return this.personalizedSMS.length > this.previewLimit;
+    }
+
+    /**
+ * Get displayed template content (with transliteration if enabled)
+ */
+    get displayedTemplateContent(): string {
+        if (!this.currentTemplate) return '';
+
+        const content = this.currentTemplate.content;
+
+        // Apply transliteration if enabled
+        if (this.isTransliterationEnabled) {
+            return transliterateCyrillicToLatin(content, TRANSLITERATION_MAPS.SMS_FRIENDLY);
+        }
+
+        return content;
+    }
+
+    /**
+     * Get displayed edited template content (with transliteration if enabled)
+     */
+    get displayedEditedTemplateContent(): string {
+        if (!this.editedTemplateContent) return '';
+
+        // Apply transliteration if enabled
+        if (this.isTransliterationEnabled) {
+            return transliterateCyrillicToLatin(this.editedTemplateContent, TRANSLITERATION_MAPS.SMS_FRIENDLY);
+        }
+
+        return this.editedTemplateContent;
     }
 
     /**

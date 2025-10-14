@@ -30,7 +30,7 @@
         @if (!isEditingTemplate) {
         <!-- View mode -->
         <div class="template-view">
-            <div class="template-content">{{ currentTemplate?.content }}</div>
+            <div class="template-content">{{ displayedTemplateContent }}</div>
             <button class="btn btn-outline" (click)="toggleTemplateEdit()" type="button">
                 ✏️ Редактирай шаблон
             </button>
@@ -38,9 +38,17 @@
         } @else {
         <!-- Edit mode -->
         <div class="template-edit">
+            <label class="template-label">Оригинален шаблон (за редактиране):</label>
             <textarea class="form-control template-textarea" rows="6" [(ngModel)]="editedTemplateContent"
                 (ngModelChange)="onTemplateContentChange()" placeholder="Въведете SMS шаблон с placeholders...">
             </textarea>
+
+            @if (isTransliterationEnabled && editedTemplateContent) {
+            <div class="template-preview-section">
+                <label class="template-label">Preview (латинизиран):</label>
+                <div class="template-preview-content">{{ displayedEditedTemplateContent }}</div>
+            </div>
+            }
 
             <div class="template-actions">
                 <button class="btn btn-primary" (click)="saveTemplateChanges()" type="button">

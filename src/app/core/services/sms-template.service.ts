@@ -32,7 +32,7 @@ export class SMSTemplateService {
     private defaultTemplate: SMSTemplate = {
         id: 'default',
         name: 'Напомняне за изтичащ договор',
-        content: 'YanakSoft:Dogovor №{Number} za {Model} izticha {End_Data}.{Ime_Firma} s obekt {Ime_Obekt}.Info:029743232',
+        content: 'YanakSoft:Договор №{Number} за {Model} изтича {End_Data}.{Ime_Firma} с обект {Ime_Obekt}.Info:029743232',
         placeholders: [
             { key: 'Ime_Firma', description: 'Име на фирма', example: 'Софтуер България ЕООД' },
             { key: 'Number', description: 'Номер на договор', example: '12345' },
@@ -330,20 +330,30 @@ export class SMSTemplateService {
 
     /**
      * Detect encoding based on content
+     * Determines if message requires Unicode encoding (70 chars) or Standard (160 chars)
      */
     detectEncoding(message: string): SMSEncoding {
-        // Check for Cyrillic characters
-        const cyrillicRegex = /[А-Яа-яЁё]/;
+        // Check for Cyrillic characters (Bulgarian, Russian, etc.)
+        const cyrillicRegex = /[\u0400-\u04FF]/;
         if (cyrillicRegex.test(message)) {
             return SMSEncoding.UNICODE;
         }
 
-        // Check for special Unicode characters
-        const specialCharsRegex = /[^\x00-\x7F]/;
-        if (specialCharsRegex.test(message)) {
+        // Check for emoji (require Unicode)
+        const emojiRegex = /[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/u;
+        if (emojiRegex.test(message)) {
             return SMSEncoding.UNICODE;
         }
 
+        // Check for other problematic Unicode characters that SMS gateways don't support well
+        // (Chinese, Arabic, Hebrew, Thai, etc.)
+        const complexUnicodeRegex = /[\u0600-\u06FF\u0750-\u077F\u0590-\u05FF\u4E00-\u9FFF\u0E00-\u0E7F]/;
+        if (complexUnicodeRegex.test(message)) {
+            return SMSEncoding.UNICODE;
+        }
+
+        // Default to STANDARD encoding (160 chars limit)
+        // This includes: Latin letters, numbers, basic punctuation, and safe symbols like №, °, etc.
         return SMSEncoding.STANDARD;
     }
 

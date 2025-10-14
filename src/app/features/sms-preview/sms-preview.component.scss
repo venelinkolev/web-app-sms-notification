@@ -85,6 +85,14 @@
   }
 
   .template-edit {
+     .template-label {
+      display: block;
+      font-size: var(--font-size-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+    }
+
     .template-textarea {
       font-family: 'Courier New', monospace;
       font-size: var(--font-size-sm);
@@ -92,6 +100,28 @@
       resize: vertical;
       min-height: 150px;
       margin-bottom: var(--spacing-md);
+    }
+
+    .template-preview-section {
+      margin-bottom: var(--spacing-md);
+      padding: var(--spacing-md);
+      background: rgba(76, 175, 80, 0.05);
+      border-left: 3px solid var(--success-color);
+      border-radius: var(--border-radius-sm);
+
+      .template-label {
+        color: var(--success-color);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .template-preview-content {
+        font-family: 'Courier New', monospace;
+        font-size: var(--font-size-sm);
+        line-height: 1.6;
+        color: var(--text-primary);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     }
 
     .template-actions {
