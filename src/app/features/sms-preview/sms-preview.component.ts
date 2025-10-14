@@ -7,6 +7,7 @@ import { DataService } from '../../core/services/data.service';
 import { SMSTemplateService } from '../../core/services/sms-template.service';
 import { SMSService } from '../../core/services/sms.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SendQueueService, SendStatus } from '../../core/services';
 
 import { ErrorLoggerService } from '../../core/services/error-logger.service';
 import { ErrorDisplayComponent } from '../../shared/components/error-display/error-display.component';
@@ -86,7 +87,8 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
         private templateService: SMSTemplateService,
         private smsService: SMSService,
         private notificationService: NotificationService,
-        private errorLogger: ErrorLoggerService
+        private errorLogger: ErrorLoggerService,
+        private sendQueueService: SendQueueService,
     ) { }
 
     ngOnInit(): void {
@@ -404,34 +406,62 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
                 };
             });
 
-            // Send with tracking (Phase 5 - will be implemented)
-            // For now, this is a placeholder that demonstrates the error handling flow
-
-            console.log('📨 SMS Preview - Prepared for sending:', {
+            // Start sending via SendQueueService
+            console.log('📨 SMS Preview - Starting send operation:', {
                 totalSMS: messages.length,
                 totalCost: this.stats.totalCost,
                 messages: messages
             });
 
-            // TODO: Phase 5 - Uncomment when ready
-            /*
-            const result: BatchOperationResult = await this.smsService
-                .sendBatchWithTracking(messages)
-                .toPromise();
-            
-            this.lastSendResult = result;
-            
-            // Process results
-            this.processSendResults(result);
-            */
+            // Start sending and subscribe to progress
+            this.sendQueueService.startSending(messages).subscribe({
+                next: (progress) => {
+                    // Progress updates are handled by SendProgressComponent
+                    // We just log here for debugging
+                    if (progress.status === SendStatus.COMPLETED) {
+                        console.log('✅ Send operation completed:', progress);
 
-            // DEMO: Simulate success for now
-            this.notificationService.success(
-                '✅ Demo Mode',
-                `${validSMS.length} SMS готови за изпращане!\n` +
-                `Реалното изпращане ще бъде активирано в Phase 5.`,
-                7000
-            );
+                        this.notificationService.success(
+                            '✅ Изпращане завършено',
+                            `Успешни: ${progress.successful} | Неуспешни: ${progress.failed}`,
+                            5000
+                        );
+                    } else if (progress.status === SendStatus.FAILED) {
+                        console.error('❌ Send operation failed:', progress);
+
+                        this.notificationService.error(
+                            '❌ Изпращане неуспешно',
+                            'Операцията беше прекъсната поради грешка'
+                        );
+                    } else if (progress.status === SendStatus.CANCELLED) {
+                        console.warn('⚠️ Send operation cancelled:', progress);
+
+                        this.notificationService.warning(
+                            '⚠️ Изпращане отменено',
+                            'Операцията беше отменена от потребителя'
+                        );
+                    }
+                },
+                error: (error) => {
+                    console.error('❌ SendQueue error:', error);
+
+                    this.errorLogger.logError(
+                        error instanceof Error ? error : new Error(String(error)),
+                        ErrorContext.SMS_API,
+                        ErrorSeverity.HIGH,
+                        {
+                            operation: 'sendQueueStart',
+                            recipientCount: validSMS.length,
+                            totalCost: this.stats.totalCost
+                        }
+                    );
+
+                    this.notificationService.error(
+                        'Грешка при стартиране',
+                        error instanceof Error ? error.message : 'Неизвестна грешка'
+                    );
+                }
+            });
 
         } catch (error) {
             // Log error
@@ -618,7 +648,7 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
   * Retry failed messages
   * Made public for template access
   */
-    async retrySending(previousResult: BatchOperationResult): Promise<void> {
+    retrySending(previousResult: BatchOperationResult): void {
         this.isSending = true;
 
         try {
@@ -627,16 +657,52 @@ export class SMSPreviewComponent implements OnInit, OnDestroy {
                 `Опитвам отново ${previousResult.retryableMessages.length} съобщения...`
             );
 
-            // TODO: Phase 5 - Implement retry
-            /*
-            const retryResult: BatchOperationResult = await this.smsService
-                .retryFailedMessages(previousResult)
-                .toPromise();
-            
-            this.processSendResults(retryResult);
-            */
+            // Retry failed messages via SMSService
+            console.log('🔄 Starting retry operation:', {
+                retryableCount: previousResult.retryableMessages.length,
+                timestamp: new Date().toISOString()
+            });
 
-            console.log('🔄 Retry would be triggered for:', previousResult.retryableMessages);
+            this.smsService.retryFailedMessages(previousResult).subscribe({
+                next: (retryResult: BatchOperationResult) => {
+                    console.log('✅ Retry completed:', retryResult);
+
+                    // Store result
+                    this.lastSendResult = retryResult;
+
+                    // Process results (show errors, statistics, etc.)
+                    this.processSendResults(retryResult);
+
+                    // Show success notification
+                    this.notificationService.success(
+                        '✅ Retry завършен',
+                        `Успешни: ${retryResult.stats.successfulCount} | Неуспешни: ${retryResult.stats.failedCount}`,
+                        5000
+                    );
+
+                    this.isSending = false;
+                },
+                error: (error) => {
+                    console.error('❌ Retry error:', error);
+
+                    this.errorLogger.logError(
+                        error instanceof Error ? error : new Error(String(error)),
+                        ErrorContext.SMS_API,
+                        ErrorSeverity.HIGH,
+                        {
+                            operation: 'retrySMS',
+                            retryableCount: previousResult.retryableMessages.length
+                        }
+                    );
+
+                    this.notificationService.error(
+                        'Грешка при retry',
+                        error instanceof Error ? error.message : 'Неизвестна грешка'
+                    );
+
+                    this.isSending = false;
+                }
+            });
 
         } catch (error) {
             this.errorLogger.logError(

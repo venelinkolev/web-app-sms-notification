@@ -272,7 +272,8 @@ export class ErrorLogViewerComponent implements OnInit, OnDestroy {
     onRetryError(error: ErrorLog): void {
         this.notificationService.info(
             'Retry функционалността',
-            'Retry логиката ще бъде имплементирана в Phase 5'
+            '',
+            // 'Retry логиката ще бъде имплементирана в Phase 5'
         );
         console.log('Retry error:', error.id);
     }
