@@ -32,7 +32,7 @@ export class SMSTemplateService {
     private defaultTemplate: SMSTemplate = {
         id: 'default',
         name: 'Напомняне за изтичащ договор',
-        content: 'YanakSoft:Договор {Number} за {Model} изтича {End_Data} {Ime_Firma} с обект {Ime_Obekt}.Info:029743232',
+        content: 'YanakSoft:Договор {Number} за {Model} изтича {End_Data} {Ime_Firma} с обект {Ime_Obekt}. www.yanaksoft.com',
         placeholders: [
             { key: 'Ime_Firma', description: 'Име на фирма', example: 'Софтуер България ЕООД' },
             { key: 'Number', description: 'Номер на договор', example: '12345' },
